@@ -7,55 +7,55 @@ import { VisitorFlowChart, visitorFlowDataProp } from "@/components/visitor-flow
 import { DepartmentVisitorChart } from "@/components/department-visitor-chart"
 import { RecentVisitorsTable } from "@/components/recent-visitor-table"
 import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { VisitorService } from "@/services/visitorService"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePathname, useRouter } from "next/navigation"
 import UnAuthorized from "./unAuthorized"
 import { visitorDataProp, visitorStatusProp } from "@/types/visitor"
+import useSWR from "swr"
+
+interface DashboardData {
+  totalVisitors: visitorDataProp | null
+  visitorsStatus: visitorStatusProp | null
+}
 
 export function DashBoard() {
   const router = useRouter()
-  const pathname=usePathname()
-  const [visitorData, setVisitorData] = useState<visitorDataProp | null>(null)
-  const [visitorStatus, setVisitorStatus] = useState<visitorStatusProp | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const pathname = usePathname()
+  const { data: session, status: sessionStatus } = useSession()
   
-  const {data:session} = useSession()
-  console.log(session);
-  
-  const visitorService = new VisitorService()
-
-  useEffect(() => {
-    async function getDashBoardData(){
-      if(session?.user?.id){
-        try {
-          setIsLoading(true)
-          const [totalVisitors, visitorsStatus] = await Promise.all([
-            session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getTotalVisitors(""):visitorService.getTotalVisitors(session.user.id),
-            session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitorsStatus(""):visitorService.getVisitorsStatus(session.user.id),
-         
-          ])
-          console.log("here are details",totalVisitors,visitorsStatus);
-          setVisitorData(totalVisitors)
-          setVisitorStatus(visitorsStatus as any)
-    
-        } catch (error) {
-          console.error("Error fetching dashboard data:", error)
-        } finally {
-          setIsLoading(false)
-        }
-      }
+  // Use SWR for data fetching with caching
+  const { data: dashboardData, error, isLoading } = useSWR<DashboardData>(
+    session?.user?.id ? ['/api/dashboard', session.user.id] : null,
+    async ([_, userId]: [string, string]) => {
+      const visitorService = new VisitorService()
+      const [totalVisitors, visitorsStatus] = await Promise.all([
+        session?.user?.role === "security" || session?.user?.role === "admin" 
+          ? visitorService.getTotalVisitors("")
+          : visitorService.getTotalVisitors(userId),
+        session?.user?.role === "security" || session?.user?.role === "admin"
+          ? visitorService.getVisitorsStatus("")
+          : visitorService.getVisitorsStatus(userId)
+      ])
+      return { totalVisitors, visitorsStatus }
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000 // Cache for 1 minute
     }
-    getDashBoardData()
-  }, [session?.user?.id])
+  )
 
-  if(session?.status === "unauthenticated"){
+  // Memoize the visitor data to prevent unnecessary re-renders
+  const visitorData = useMemo(() => dashboardData?.totalVisitors || null, [dashboardData])
+  const visitorStatus = useMemo(() => dashboardData?.visitorsStatus || null, [dashboardData])
+
+  if (sessionStatus === "unauthenticated") {
     router.push("/auth/signin")
     return null
   }
 
-  if(session?.status === "loading" || isLoading){
+  if (sessionStatus === "loading" || isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
