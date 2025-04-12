@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Dialog,
@@ -9,17 +10,26 @@ import {
 } from "@/components/ui/dialog";
 
 export default function LoginStatusPopup() {
-  const { status } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
-      setTimeout(() => setOpen(true), 300); 
+      setTimeout(() => setOpen(true), 300);
     }
   }, [status]);
 
+  const handleDialogClose = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen && session?.user?.role) {
+      const role = session.user.role.toLowerCase();
+      router.push(`/${role}`);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="bg-black text-white border border-white animate-pulse shadow-lg shadow-purple-500/30">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold text-cyan-400 glow-text">

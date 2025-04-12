@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Html5Qrcode } from "html5-qrcode"
-import { Camera, CheckSquare, QrCode, UserCheck, UserMinus } from "lucide-react"
+import { Camera, CheckSquare, QrCode, UserCheck, UserMinus, CheckCircle, XCircle, Clock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -217,15 +217,36 @@ export function CheckInOutScreen() {
                         ? "default"
                         : visitorData.status === "checked-out"
                           ? "secondary"
-                          : "outline"
+                          : visitorData.status === "pre_approved"
+                            ? "default"
+                            : visitorData.status === "approved"
+                              ? "default"
+                              : "outline"
                     }
-                    className="mt-1"
+                    className="flex w-24 justify-center items-center gap-1"
                   >
-                    {visitorData.status === "checked-in"
-                      ? "Checked In"
-                      : visitorData.status === "checked-out"
-                        ? "Checked Out"
-                        : "Pending"}
+                    {visitorData.status === "checked-in" ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : visitorData.status === "checked-out" ? (
+                      <XCircle className="h-3 w-3" />
+                    ) : visitorData.status === "pre_approved" ? (
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                    ) : visitorData.status === "approved" ? (
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                    <span className="capitalize">
+                      {visitorData.status === "checked_in"
+                        ? "Checked In"
+                        : visitorData.status === "checked_out"
+                          ? "Checked Out"
+                          : visitorData.status === "pre_approved"
+                            ? "Pre Approved"
+                            : visitorData.status === "approved"
+                              ? "Approved"
+                              : "Pending"}
+                    </span>
                   </Badge>
                 </div>
               </div>
@@ -276,20 +297,24 @@ export function CheckInOutScreen() {
                 )}
               </div>
 
-              <div className="flex gap-2">
-                {visitorData.status === "pending" && (
-                  <Button onClick={handleCheckIn} className="w-full">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Check In
-                  </Button>
-                )}
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  {(visitorData.status === "approved" || visitorData.status === "pre_approved") && (
+                    <Button onClick={handleCheckIn} className="w-full">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Check In
+                    </Button>
+                  )}
 
-                {visitorData.status === "checked-in" && (
-                  <Button onClick={handleCheckOut} className="w-full">
-                    <UserMinus className="mr-2 h-4 w-4" />
-                    Check Out
-                  </Button>
-                )}
+                  {visitorData.status === "checked-in" && (
+                    <Button onClick={handleCheckOut} className="w-full">
+                      <UserMinus className="mr-2 h-4 w-4" />
+                      Check Out
+                    </Button>
+                  )}
+                </div>
+
+                <Separator />
 
                 <Button variant="outline" onClick={resetVisitor} className="w-full">
                   New Visitor

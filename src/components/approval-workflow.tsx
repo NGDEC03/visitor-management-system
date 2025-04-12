@@ -13,17 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { VisitorService } from "@/services/visitorService"
-
-interface Visitor {
-  id: string
-  name: string
-  purpose: string
-  host: string
-  department: string
-  arrivalTime: string
-  photo: string
-  status: "pending" | "approved" | "rejected"
-}
+import { Visitor } from "@/services/api"
 
 interface SessionUser {
   name?: string | null
@@ -41,7 +31,6 @@ interface VisitorsData {
 
 export function ApprovalWorkflow() {
   const {data:session}=useSession()
-    
   const visitorService=new VisitorService()
   const { toast } = useToast() 
   
@@ -52,28 +41,50 @@ export function ApprovalWorkflow() {
     approved: [],
     rejected: []
   })
-
+  
   useEffect(()=>{
     const fetchVisitors=async()=>{
-      const visitors=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.id as string))
-      visitors.forEach((visitor:any)=>{
-        if(visitor.status==="pending"){
-          setVisitors((prev)=>({...prev,pending:[...prev.pending,visitor]}))
-        }
-        else if(visitor.status==="approved"){
-          setVisitors((prev)=>({...prev,approved:[...prev.approved,visitor]}))
-        }
-        else if(visitor.status==="rejected"){
-          setVisitors((prev)=>({...prev,rejected:[...prev.rejected,visitor]}))
-        }
-      })
+      const categorizedVisitors: VisitorsData = {
+        pending: [],
+        approved: [],
+        rejected: [],
+      }
+      
+      try {
+        const fetchedVisitors=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.id as string))
+        console.log("Fetched visitors:", fetchedVisitors);
+        
+      
+          fetchedVisitors.visitors.forEach((visitor:Visitor)=>{
+            if (visitor.status === "pending") categorizedVisitors.pending.push(visitor)
+            else if (visitor.status === "approved") categorizedVisitors.approved.push(visitor)
+            else if (visitor.status === "rejected") categorizedVisitors.rejected.push(visitor)
+          })
+          console.log("Categorized visitors:", categorizedVisitors);
+          setVisitors(categorizedVisitors)
+       } catch (error) {
+        console.error("Error fetching visitors:", error);
+        setVisitors(categorizedVisitors)
+      }
     }
     fetchVisitors()
-  },[])
+  },[session?.user?.id, session?.user?.role])
 
-  const handleApprove = async (visitorId: string) => {
+  const handleApprove = async (visitorId: string | undefined) => {
+    if (!visitorId) {
+      toast({
+        title: "Error",
+        description: "Invalid visitor ID"
+      })
+      return;
+    }
     try {
-      const updatedVisitor=await visitorService.updateVisitor(visitorId,"approved")
+      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "approved")
+      setVisitors(prev => ({
+        ...prev,
+        pending: prev.pending.filter(v => v.id !== visitorId),
+        approved: [...prev.approved, updatedVisitor]
+      }))
       toast({
         title: "Visitor approved",
         description: "The visitor has been approved and notified.",
@@ -86,9 +97,21 @@ export function ApprovalWorkflow() {
     }
   }
 
-  const handleReject = async (visitorId: string) => {
+  const handleReject = async (visitorId: string | undefined) => {
+    if (!visitorId) {
+      toast({
+        title: "Error",
+        description: "Invalid visitor ID"
+      })
+      return;
+    }
     try {
-      const updatedVisitor=await visitorService.updateVisitor(visitorId,"rejected")
+      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "rejected")
+      setVisitors(prev => ({
+        ...prev,
+        pending: prev.pending.filter(v => v.id !== visitorId),
+        rejected: [...prev.rejected, updatedVisitor]
+      }))
       toast({
         title: "Visitor rejected",
         description: "The visitor has been rejected and notified.",
@@ -96,11 +119,11 @@ export function ApprovalWorkflow() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to reject visitor"
+        description: "Failed to reject visitor",
       })
     }
   }
-
+  
   const getVisitorsByStatus = () => {
     switch (status) {
       case "pending":
@@ -117,13 +140,13 @@ export function ApprovalWorkflow() {
   const filteredVisitors = getVisitorsByStatus().filter(
     (visitor: Visitor) =>
       visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      visitor.host.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (visitor.host || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       visitor.department.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const showTabs = session?.user?.role === "admin" 
     ? ["pending", "approved", "rejected", "all"]
-    : ["pending"]
+    : ["pending", "approved", "rejected"]
 
   return (
     <div className="space-y-6">
@@ -133,7 +156,7 @@ export function ApprovalWorkflow() {
           <CardDescription>
             {session?.user?.role === "admin" 
               ? "Review and manage all visitor requests"
-              : "Review visitor requests for your department"}
+              : "Review and track visitor requests for your department"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -222,7 +245,7 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
             <TableHead>Purpose</TableHead>
             <TableHead>Host</TableHead>
             <TableHead>Department</TableHead>
-            <TableHead>Arrival Time</TableHead>
+          
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -253,7 +276,6 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
                 <TableCell>{visitor.purpose}</TableCell>
                 <TableCell>{visitor.host}</TableCell>
                 <TableCell>{visitor.department}</TableCell>
-                <TableCell>{visitor.arrivalTime}</TableCell>
                 {showActions && (
                   <TableCell>
                     <div className="flex gap-2">

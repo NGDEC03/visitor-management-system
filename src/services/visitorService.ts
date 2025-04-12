@@ -1,4 +1,4 @@
-import { visitorStatusProp } from "@/components/dashboard"
+import { visitorStatusProp } from "@/types/visitor"
 import { Visitor } from "./api"
 import axios from "axios"
 import { visitorFlowDataProp } from "@/components/visitor-flow-chart"

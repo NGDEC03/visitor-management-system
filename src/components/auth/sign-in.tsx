@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 export function SignInForm() {
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -23,6 +26,14 @@ export function SignInForm() {
     password: "",
     rememberMe: false,
   })
+
+  useEffect(() => {
+    console.log("Session Status:", status)
+    console.log("Session Data:", session)
+    if (status === "authenticated") {
+      router.push(callbackUrl)
+    }
+  }, [status, session, router, callbackUrl])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -38,26 +49,28 @@ export function SignInForm() {
     setIsLoading(true)
 
     try {
+      console.log("Attempting sign in...")
       const result = await signIn("Credentials", {
         email: formData.email,
         password: formData.password,
-        redirect: true,
-        callbackUrl: "/",
+        redirect: false,
+        callbackUrl,
       })
 
-      console.log("res",result);  
-      
+      console.log("Sign in result:", result)
 
       if (result?.error) {
         throw new Error(result.error)
       }
 
-      toast({
-        title: "Sign in successful",
-        description: "Welcome back to the Visitor Management System",
-      })
-
-      router.push("/")
+      if (result?.ok) {
+        toast({
+          title: "Sign in successful",
+          description: "Welcome back to the Visitor Management System",
+        })
+        router.push(callbackUrl)
+        router.refresh()
+      }
     } catch (error: any) {
       console.error("Sign in error:", error)
       toast({

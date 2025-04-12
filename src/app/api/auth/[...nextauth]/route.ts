@@ -1,89 +1,78 @@
-import { PrismaClient } from "@/generated/prisma"
-import bcrypt from "bcryptjs"
-import NextAuth from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-const dbUrl = process.env.DATABASE_URL;
+import { PrismaClient } from "@/generated/prisma";
+import { User, Session } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt";
+import NextAuth from "next-auth/next";
+import bcrypt from 'bcryptjs';
+import { userAgent } from "next/server";
+import { UserRole } from "@/generated/prisma";
 
-if (!dbUrl) {
-  throw new Error("DATABASE_URL is not defined in your environment variables");
-}
-console.log(dbUrl);
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: dbUrl
-    },
-  },
-});
+const prisma = new PrismaClient();
 
 const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
+    providers: [
+        CredentialsProvider({
+            name: "Credentials",
+            id:"user-login",
+            credentials: {
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" },
+            },
       async authorize(credentials) {
-        try {
-          if(!credentials){
-            throw new Error("Credentials Not Found")
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Invalid credentials")
+        }
+
+        const user = await prisma.user.findUnique({
+          where: {
+            email: credentials.email
           }
-         const {email,password}=credentials;
-         if(!email || !password){
-          throw new Error("Credentials MisMatch")
-         }
-         
-          const user=await prisma.user.findUnique({
-            where:{
-              email:credentials.email
-            }
-          })
-          console.log(password,user?.password);
-          
-if(!user){
-  throw new Error("User Not Found")
-}
-const isPasswordValid=await bcrypt.compare(password,user.password)
-if(!isPasswordValid){
-  throw new Error("Invalid Credentials")
-}
-         return user
-        } catch (error) {
-          console.error("Authorization error:", error)
-          return null
+        })
+
+        if (!user) {
+          throw new Error("User not found")
+        }
+
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+
+        if (!isPasswordValid) {
+          throw new Error("Invalid password")
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          department: user.department
         }
       }
     })
   ],
-  callbacks: {
+
+      secret: process.env.SECRET || "default",
+      callbacks: {
     async jwt({ token, user }:{token: any, user: any}) {
       if (user) {
         token.role = user.role
         token.id = user.id
+        token.department = user.department
       }
       return token
     },
     async session({ session, token }:{session: any, token: any}) {
       if (session.user) {
-        session.user.role = token.role as string
+        session.user.role = token.role as UserRole
         session.user.id = token.id as string
         session.user.name = token.name as string
         session.user.email = token.email as string
-        session.user.image = token.image as string
-        session.user.department = token.department as string
+        session.user.department = token.department as string | null
       }
       return session
-    }
+    },
   },
-  session: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  secret: process.env.NEXTAUTH_SECRET || "secret",
-}
+};
 
-export { authOptions }
+const handler = NextAuth(authOptions);
 
-const handler = NextAuth(authOptions)
-export { handler as GET, handler as POST } 
+export { handler as GET, handler as POST };

@@ -11,21 +11,8 @@ import { useEffect, useState } from "react"
 import { VisitorService } from "@/services/visitorService"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePathname, useRouter } from "next/navigation"
-
-interface visitorDataProp{
-  totalVisitorsToday:number
-  totalVisitorsYesterday:number
-}
-
-export interface visitorStatusProp {
-  status: {
-    approved: number,
-    checkedIn: number,
-    checkedOut: number,
-    pending: number,
-    rejected: number
-  }
-}
+import UnAuthorized from "./unAuthorized"
+import { visitorDataProp, visitorStatusProp } from "@/types/visitor"
 
 export function DashBoard() {
   const router = useRouter()
@@ -35,6 +22,8 @@ export function DashBoard() {
   const [isLoading, setIsLoading] = useState(true)
   
   const {data:session} = useSession()
+  console.log(session);
+  
   const visitorService = new VisitorService()
 
   useEffect(() => {
@@ -92,12 +81,7 @@ export function DashBoard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        </TabsList>
+       
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

@@ -19,11 +19,23 @@ const [data,setData]=useState<DataItem[]>([])
     async function modifyData(){
       const visitorService=new VisitorService()
       const departmentVisitors=await visitorService.getDepartmentVisitors(session?.user?.id as string)
+      console.log('Department Visitors:', departmentVisitors) // Debug log
       const data=departmentVisitors.map((visitor)=>{
+        const department = visitor.department.toLowerCase()
+        const color = 
+          department.includes('it') ? '#8884d8' :
+          department.includes('hr') ? '#82ca9d' :
+          department.includes('finance') ? '#ffc658' :
+          department.includes('marketing') ? '#ff8042' :
+          department.includes('operations') ? '#0088fe' :
+          '#ff7300'
+        
+        console.log('Department:', visitor.department, 'Color:', color) // Debug log
+        
         return {
           name:visitor.department,
           value:visitor.count,
-          color:visitor.department==="IT"?"#8884d8":visitor.department==="HR"?"#82ca9d":visitor.department==="Finance"?"#ffc658":visitor.department==="Marketing"?"#ff8042":visitor.department==="Operations"?"#0088fe":"#0088fe"
+          color
         }
       })
       setData(data)
@@ -60,3 +72,4 @@ const [data,setData]=useState<DataItem[]>([])
     </div>
   )
 }
+

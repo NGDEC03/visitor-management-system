@@ -33,6 +33,7 @@ import { VisitorService } from "@/services/visitorService"
 import { generateQRCode } from "@/utils/generateQRCode"
 import { useSession } from "next-auth/react"
 import { Visitor } from "@/generated/prisma"
+import { api } from "@/services/api"
 
 // interface VisitorWithStatus extends Visitor {
 //   qrcode: string;
@@ -120,7 +121,7 @@ export function RecentVisitorsTable() {
       toast.error("Visit already cancelled")
       return
     }
-    if(visitor.status !== "approved") {
+    if(visitor.status !== "approved" && visitor.status !== "pre_approved") {
       toast.error("Visitor not approved")
       return
     }
@@ -179,6 +180,14 @@ export function RecentVisitorsTable() {
     const visitor = visitors.find(v => v.id === id)
     if(visitor?.status==='cancelled'){
       toast.error("Visit already cancelled")
+      return
+    }
+    if(visitor?.status==="checked-in"){
+      toast.error("Visit already checked in")
+      return
+    }
+    if(visitor?.status==="checked-out"){
+      toast.error("Visit already checked out")
       return
     }
     try {
