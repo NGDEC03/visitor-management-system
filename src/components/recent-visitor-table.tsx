@@ -121,14 +121,15 @@ export function RecentVisitorsTable() {
       toast.error("Visit already cancelled")
       return
     }
-    if(visitor.status !== "approved" && visitor.status !== "pre_approved") {
-      toast.error("Visitor not approved")
+    if(visitor.status==="pending"){
+      toast.error("Visit not approved")
       return
     }
+   
     setOpenPassDialog(true)
     setPassLoading(true)
     try {
-      const passData = await visitorService.getVisitorDetails(visitor.id as string)
+      const passData = await visitorService.getVisitorDetails(visitor.email as string)
       console.log(passData);
       const qrcode=await generateQRCode(passData)
       setVisitorPassData({ ...passData, status: visitor.status, checkIn: passData.checkInTime || "",qrcode:qrcode })

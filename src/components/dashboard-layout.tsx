@@ -216,13 +216,10 @@ console.log(role,session?.user?.role);
         </SidebarContent>
       </Sidebar>
 
-      <div className="flex-1 md:ml-[var(--sidebar-width)]">
+      <div className="flex-1 ">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6 w-full">
           <SidebarTrigger className="hidden md:flex" />
           <div className="ml-auto flex items-center gap-4">
-            <Button variant="outline" size="sm">
-              Help
-            </Button>
             <Button
               variant="default"
               size="sm"
@@ -238,7 +235,11 @@ console.log(role,session?.user?.role);
             </Button>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 p-4">
+  <div className="mx-auto w-full max-w-7xl">
+    {children}
+  </div>
+</main>
       </div>
     </SidebarProvider>
   </div>

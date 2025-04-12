@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req:NextRequest):Promise<NextResponse<Visitor> | NextResponse<{error:string}>>{
     const prisma=new PrismaClient()
  const url=new URL(req.url)
- const id=url.searchParams.get('visitorId') || ""
+ const email=url.searchParams.get('visitorEmail') || ""
  try{
     const visitor=await prisma.visitor.findUnique({
         where:{
-            id
+            email
         }
     })
     if(!visitor) return NextResponse.json({error:"Visitor Not Found"},{status:404})

@@ -14,8 +14,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VisitorService } from "@/services/visitorService"
 import { Visitor } from "@/services/api"
+import { User } from "@/generated/prisma"
 
 export function VisitorRegistrationForm() {
+  const [hosts,setHosts]=useState<User[]>([])
   const visitorService = new VisitorService()
   const { toast } = useToast()
   const [details,setDetails]=useState({
@@ -32,7 +34,14 @@ export function VisitorRegistrationForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
+  useEffect(()=>{
+    const fetchHosts=async()=>{
+      const hosts=await fetch("/api/getHosts")
+      const hostsData=await hosts.json()
+      setHosts(hostsData)
+    }
+    fetchHosts()
+  },[])
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if(!photoPreview){
@@ -175,11 +184,11 @@ export function VisitorRegistrationForm() {
                     <SelectValue placeholder="Select host" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sarah-johnson">Sarah Johnson (Marketing)</SelectItem>
-                    <SelectItem value="michael-brown">Michael Brown (HR)</SelectItem>
-                    <SelectItem value="david-miller">David Miller (IT)</SelectItem>
-                    <SelectItem value="lisa-anderson">Lisa Anderson (Operations)</SelectItem>
-                    <SelectItem value="james-wilson">James Wilson (Finance)</SelectItem>
+                  {hosts.map((host,idx) => (
+        <SelectItem key={idx} value={host.name}>
+          {host.name} ({host.department})
+        </SelectItem>
+      ))}
                   </SelectContent>
                 </Select>
               </div>

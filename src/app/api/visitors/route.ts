@@ -41,7 +41,6 @@ export async function GET(req: NextRequest):Promise<NextResponse<Visitor[]> | Ne
 export async function POST(req: NextRequest):Promise<NextResponse<{visitor:Visitor,host:User} | {error:string}>> {
   try {
     const visitor: VisitorPayload = await req.json();
-visitor.host="nikunj"
 
     if (!visitor.host) {
       return NextResponse.json({ error: "Host name is required" }, { status: 400 });

@@ -1,49 +1,62 @@
 "use client"
 
 import { signIn, useSession } from "next-auth/react"
-import { useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import Authenticated from "@/components/authenticated" // <== import this
 
 export default function SignIn() {
   const { toast } = useToast()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
-  if (session) {
-    return <Authenticated />
-  }
+  const router = useRouter()
+  const callbackUrlParam = searchParams.get("callbackUrl")
+
+  // 🔁 Redirect once session is loaded and authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      const role = session?.user?.role
+      const destination = callbackUrlParam || `/${role || "dashboard"}`
+      router.push(destination)
+    }
+  }, [status, session, callbackUrlParam, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
       const res = await signIn("user-login", {
-        redirect: true,
-        callbackUrl,
+        redirect: false, // Important: Don't redirect here, handle it manually after session update
         email,
         password,
       })
-      toast({
-        title: "Signed in successfully",
-        description: "Redirecting...",
-      })
+
+      if (res?.error) {
+        toast({
+          title: "Invalid credentials",
+          description: res.error,
+        })
+      } else {
+        toast({
+          title: "Signed in successfully",
+          description: "Redirecting...",
+        })
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Invalid credentials",
+        description: "Something went wrong during sign in.",
       })
     } finally {
       setIsLoading(false)
@@ -51,9 +64,15 @@ export default function SignIn() {
   }
 
   return (
+    
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
+       
+        <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-primary ">
+        <ArrowLeft className="h-8 w-8 rounded-full p-1 border-2 border-primary relative left-[46%]" />
+        
+      </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Sign In</h1>
           <p className="text-sm text-muted-foreground">Enter your credentials to access your account</p>
         </div>

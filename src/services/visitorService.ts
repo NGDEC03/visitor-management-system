@@ -15,8 +15,8 @@ this.visitor=visitor
     const response = await axios.get<Visitor[]>(`/api/visitors`)
     return response.data
   }
-  async getVisitorDetails(id: string): Promise<Visitor> {
-    const response = await axios.get<Visitor>(`/api/visitors/getVisitorId?visitorId=${id}`)
+  async getVisitorDetails(email:string): Promise<Visitor> {
+    const response = await axios.get<Visitor>(`/api/visitors/getVisitorByEmail?visitorEmail=${email}`)
     return response.data
   }
   async getFlowData(hostId:string): Promise<visitorFlowDataProp[]> {

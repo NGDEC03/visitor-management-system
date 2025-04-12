@@ -17,15 +17,15 @@ import { VisitorService } from "@/services/visitorService"
 export function CheckInOutScreen() {
   const visitorService = new VisitorService()
   const { toast } = useToast()
-  const [visitorId, setVisitorId] = useState("")
+  const [visitorEmail, setVisitorEmail] = useState("")
   const [scanActive, setScanActive] = useState(false)
   const [visitorData, setVisitorData] = useState<any>(null)
   const qrRef = useRef<HTMLDivElement>(null)
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
 
-  const fetchVisitorData = async (id: string) => {
+  const fetchVisitorData = async (email: string) => {
     try {
-      const res = await visitorService.getVisitorDetails(id)
+      const res = await visitorService.getVisitorDetails(email)
       setVisitorData(res)
       toast({ title: "Visitor found", description: "Visitor info retrieved successfully" })
     } catch (err: any) {
@@ -34,14 +34,14 @@ export function CheckInOutScreen() {
   }
 
   const handleManualCheckIn = () => {
-    if (!visitorId) {
+    if (!visitorEmail) {
       toast({
         title: "Error",
-        description: "Please enter a visitor ID",
+        description: "Please enter a visitor Email",
       })
       return
     }
-    fetchVisitorData(visitorId)
+    fetchVisitorData(visitorEmail)
   }
 
   const startQrScanner = async () => {
@@ -128,7 +128,7 @@ export function CheckInOutScreen() {
   }
 
   const resetVisitor = () => {
-    setVisitorId("")
+    setVisitorEmail("")
     setVisitorData(null)
   }
 
@@ -176,10 +176,10 @@ export function CheckInOutScreen() {
                   </label>
                   <div className="flex gap-2">
                     <Input
-                      id="visitorId"
-                      placeholder="Enter visitor ID"
-                      value={visitorId}
-                      onChange={(e) => setVisitorId(e.target.value)}
+                      id="visitorEmail"
+                      placeholder="Enter visitor Email"
+                      value={visitorEmail}
+                      onChange={(e) => setVisitorEmail(e.target.value)}
                     />
                     <Button onClick={handleManualCheckIn}>Find</Button>
                   </div>
