@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Visitor Management System
+
+A modern, secure, and efficient visitor management system built with Next.js, Prisma, and NextAuth.js.
+
+## Features
+
+- 🔐 **Secure Authentication**
+  - Role-based access control (Admin, Security, Employee)
+  - Email-based authentication
+  - Password reset functionality
+
+- 👥 **Visitor Management**
+  - Visitor registration and pre-approval
+  - Check-in/Check-out system
+  - QR code-based visitor passes
+  - Real-time visitor tracking
+
+- 📊 **Dashboard & Analytics**
+  - Real-time visitor statistics
+  - Department-wise visitor distribution
+  - Visitor flow analytics
+  - Recent visitor history
+
+- 📱 **Responsive Design**
+  - Mobile-friendly interface
+  - Modern UI components
+  - Dark/Light mode support
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js
+- **Email**: Nodemailer
+- **QR Code**: QR Code Generator
+- **Charts**: Recharts
+
+## Prerequisites
+
+- Node.js 18.0.0 or later
+- PostgreSQL database
+- SMTP server for email functionality
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone the repository**
+   ```bash
+   git clone <your-repository-url>
+   cd visitor
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Set up environment variables**
+   Create a `.env` file in the root directory with the following variables:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/visitor_db"
+   NEXTAUTH_SECRET="your-secret-key"
+   NEXTAUTH_URL="http://localhost:3000"
+   SMTP_HOST="your-smtp-host"
+   SMTP_PORT="your-smtp-port"
+   SMTP_USER="your-smtp-user"
+   SMTP_PASS="your-smtp-password"
+   ```
+
+4. **Set up the database**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+6. **Open [http://localhost:3000](http://localhost:3000)** in your browser
+
+## Project Structure
+
+```
+visitor/
+├── prisma/           # Database schema and migrations
+├── public/           # Static assets
+├── src/
+│   ├── app/         # Next.js app router
+│   ├── components/  # React components
+│   ├── services/    # API services
+│   ├── utils/       # Utility functions
+│   └── types/       # TypeScript types
+└── package.json     # Project dependencies
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Features Implementation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Authentication
+- Role-based access control
+- Secure session management
+- Password reset functionality
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Visitor Management
+- Pre-approval workflow
+- Check-in/out system
+- QR code generation
+- Real-time status updates
 
-## Learn More
+### Dashboard
+- Real-time analytics
+- Department-wise distribution
+- Visitor flow tracking
+- Recent visitor history
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application can be deployed on Vercel:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Push your code to GitHub
+2. Import your repository to Vercel
+3. Set up environment variables
+4. Deploy!
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For support, email [your-email@example.com] or open an issue in the repository.
+
+## Acknowledgments
+
+- Next.js team for the amazing framework
+- Prisma team for the excellent ORM
+- All contributors who have helped improve this project
