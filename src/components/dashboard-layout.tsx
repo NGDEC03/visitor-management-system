@@ -228,10 +228,7 @@ console.log(role,session?.user?.role);
               size="sm"
               onClick={() => {
                 if (session?.user) {
-                  signOut();
-                  router.push("/auth/signin");
-                } else {
-                  router.push("/auth/signin");
+                  signOut({redirect:false});
                 }
               }}
               className="flex items-center gap-2"

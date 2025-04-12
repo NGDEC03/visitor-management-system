@@ -50,6 +50,9 @@ const authOptions = {
     })
   ],
 
+  pages:{
+    signIn:"/auth/signin",
+  },
       secret: process.env.SECRET || "default",
       callbacks: {
     async jwt({ token, user }:{token: any, user: any}) {

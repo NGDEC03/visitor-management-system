@@ -30,9 +30,9 @@ export function SignInForm() {
   useEffect(() => {
     console.log("Session Status:", status)
     console.log("Session Data:", session)
-    if (status === "authenticated") {
-      router.push(callbackUrl)
-    }
+    // if (status === "authenticated") {
+    //   router.push(callbackUrl)
+    // }
   }, [status, session, router, callbackUrl])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,9 +53,10 @@ export function SignInForm() {
       const result = await signIn("Credentials", {
         email: formData.email,
         password: formData.password,
-        redirect: false,
+        redirect: true,
         callbackUrl,
       })
+console.log(result);
 
       console.log("Sign in result:", result)
 
@@ -68,8 +69,8 @@ export function SignInForm() {
           title: "Sign in successful",
           description: "Welcome back to the Visitor Management System",
         })
-        router.push(callbackUrl)
-        router.refresh()
+        // router.push(callbackUrl)
+        // router.refresh()
       }
     } catch (error: any) {
       console.error("Sign in error:", error)
