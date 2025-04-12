@@ -31,7 +31,7 @@ model User {
   department String?
   visitor    Visitor[] @relation("UserVisitor")
   phone      String
-  fcmToken   String?
+  resetToken String? @unique
 }
 
 model Visitor {
@@ -45,8 +45,8 @@ model Visitor {
   department   String
   photo        String
   status       VisitorStatus @default(pending)
-  checkInTime  String?
-  checkOutTime String?
+  checkInTime  DateTime?
+  checkOutTime DateTime?
   host         User          @relation("UserVisitor", fields: [hostId], references: [id])
   hostId       String        @db.ObjectId
   createdAt DateTime @default(now())

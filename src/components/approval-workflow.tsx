@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { VisitorService } from "@/services/visitorService"
 
 interface Visitor {
   id: string
@@ -38,16 +39,12 @@ interface VisitorsData {
   rejected: Visitor[]
 }
 
-const BACKEND_URL = "/backend/api"
-
 export function ApprovalWorkflow() {
+  const {data:session}=useSession()
+    
+  const visitorService=new VisitorService()
   const { toast } = useToast() 
-  // const { data: session } = useSession()
-  const session={
-    user:{
-      role:"admin"
-    }
-  }
+  
   const [searchQuery, setSearchQuery] = useState("")
   const [status, setStatus] = useState("pending")
   const [visitors, setVisitors] = useState<VisitorsData>({
@@ -56,73 +53,27 @@ export function ApprovalWorkflow() {
     rejected: []
   })
 
-  // Memoize the mock data to prevent unnecessary re-renders
-  const mockData = useMemo<Record<string, VisitorsData>>(() => ({
-    admin: {
-      pending: [
-        {
-          id: "1",
-          name: "Emily Davis",
-          purpose: "Interview",
-          host: "Michael Brown",
-          department: "HR",
-          arrivalTime: "11:15 AM",
-          photo: "/placeholder.svg?height=40&width=40",
-          status: "pending" as const
+  useEffect(()=>{
+    const fetchVisitors=async()=>{
+      const visitors=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.id as string))
+      visitors.forEach((visitor:any)=>{
+        if(visitor.status==="pending"){
+          setVisitors((prev)=>({...prev,pending:[...prev.pending,visitor]}))
         }
-      ],
-      approved: [
-        {
-          id: "5",
-          name: "John Smith",
-          purpose: "Meeting",
-          host: "Sarah Johnson",
-          department: "Marketing",
-          arrivalTime: "10:30 AM",
-          photo: "/placeholder.svg?height=40&width=40",
-          status: "approved" as const
+        else if(visitor.status==="approved"){
+          setVisitors((prev)=>({...prev,approved:[...prev.approved,visitor]}))
         }
-      ],
-      rejected: [
-        {
-          id: "7",
-          name: "Jennifer Lee",
-          purpose: "Delivery",
-          host: "Lisa Anderson",
-          department: "Operations",
-          arrivalTime: "02:00 PM",
-          photo: "/placeholder.svg?height=40&width=40",
-          status: "rejected" as const
+        else if(visitor.status==="rejected"){
+          setVisitors((prev)=>({...prev,rejected:[...prev.rejected,visitor]}))
         }
-      ]
-    },
-    employee: {
-      pending: [
-        {
-          id: "1",
-          name: "Emily Davis",
-          purpose: "Interview",
-          host: "You",
-          department: "Your Department",
-          arrivalTime: "11:15 AM",
-          photo: "/placeholder.svg?height=40&width=40",
-          status: "pending" as const
-        }
-      ],
-      approved: [],
-      rejected: []
+      })
     }
-  }), [])
-
-  useEffect(() => {
-    if (!session?.user?.role) return
-
-    const role = session.user.role
-    setVisitors(mockData[role])
-  }, [session?.user?.role, mockData])
+    fetchVisitors()
+  },[])
 
   const handleApprove = async (visitorId: string) => {
     try {
+      const updatedVisitor=await visitorService.updateVisitor(visitorId,"approved")
       toast({
         title: "Visitor approved",
         description: "The visitor has been approved and notified.",
@@ -137,6 +88,7 @@ export function ApprovalWorkflow() {
 
   const handleReject = async (visitorId: string) => {
     try {
+      const updatedVisitor=await visitorService.updateVisitor(visitorId,"rejected")
       toast({
         title: "Visitor rejected",
         description: "The visitor has been rejected and notified.",
@@ -199,7 +151,6 @@ export function ApprovalWorkflow() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-
               <div className="flex w-full sm:w-auto gap-2">
                 <Input
                   placeholder="Search visitors..."
@@ -227,7 +178,7 @@ export function ApprovalWorkflow() {
         </CardContent>
       </Card>
 
-      {session?.user?.role === "admin" && (
+      
         <Card>
           <CardHeader>
             <CardTitle>Visitor History</CardTitle>
@@ -250,7 +201,6 @@ export function ApprovalWorkflow() {
             </Table>
           </CardContent>
         </Card>
-      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { CheckCircle, Clock, MoreHorizontal, Search, XCircle } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { redirect, usePathname, useRouter } from "next/navigation"
 import { format } from "date-fns"
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { api, Visitor } from "@/services/api"
 import { toast } from "react-hot-toast"
 import {
   Dialog,
@@ -32,43 +31,43 @@ import {
 } from "@/components/ui/dialog"
 import { VisitorService } from "@/services/visitorService"
 import { generateQRCode } from "@/utils/generateQRCode"
+import { useSession } from "next-auth/react"
+import { Visitor } from "@/generated/prisma"
 
-type VisitorStatus = "pending" | "checked-in" | "checked-out" | "cancelled" | "approved"
-
-type VisitorWithStatus = Visitor & {
-  checkIn: string
-  qrcode:string
-}
+// interface VisitorWithStatus extends Visitor {
+//   qrcode: string;
+//   createdAt: string;
+// }
 
 export function RecentVisitorsTable() {
   const visitorService=new VisitorService()
+  const {data:session}=useSession()
   const router = useRouter()
-  const [visitors, setVisitors] = useState<VisitorWithStatus[]>([])
+  const [visitors, setVisitors] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedVisitor, setSelectedVisitor] = useState<VisitorWithStatus | null>(null)
+  const [selectedVisitor, setSelectedVisitor] = useState(null)
 
-  // New state for "Print Pass"
   const [openPassDialog, setOpenPassDialog] = useState(false)
   const [passLoading, setPassLoading] = useState(false)
-  const [visitorPassData, setVisitorPassData] = useState<VisitorWithStatus | null>(null)
+  const [visitorPassData, setVisitorPassData] = useState(null)
 
   useEffect(() => {
     const fetchVisitors = async () => {
       try {
         console.log("fetching visitors");
         
-        const data=await visitorService.getVisitors()
+        const data=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.name as string))
         console.log(data);
         
-        const visitorsWithStatus: VisitorWithStatus[] = data.map(visitor => ({
+        const visitorsWithStatus = data.map(visitor => ({
           ...visitor,
-          status: visitor.status as VisitorStatus,
+          status: visitor.status,
           checkIn: visitor.checkInTime || ""
         }))
         
-        setVisitors(visitorsWithStatus)
+        setVisitors(visitorsWithStatus as any)
       } catch (error) {
         toast.error("Failed to fetch visitors")
         console.error(error)
@@ -82,7 +81,7 @@ export function RecentVisitorsTable() {
 
   const filteredVisitors = useMemo(() => {
     return visitors.filter(
-      (visitor) =>
+      (visitor:any) =>
         visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         visitor.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
         visitor.department.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -90,35 +89,12 @@ export function RecentVisitorsTable() {
   }, [searchQuery, visitors])
 
   const handleCheckIn = async (id: string) => {
-    try {
-      const updatedVisitor = await api.checkInVisitor(id)
-      const visitorWithStatus: VisitorWithStatus = {
-        ...updatedVisitor,
-        status: "checked-in",
-        checkIn: updatedVisitor.checkInTime || ""
-      }
-      setVisitors(visitors.map(v => v.id === id ? visitorWithStatus : v))
-      toast.success("Visitor checked in successfully")
-    } catch (error) {
-      toast.error("Failed to check in visitor")
-      console.error(error)
-    }
+    redirect("/check-in-out")
+      
   }
 
   const handleCheckOut = async (id: string) => {
-    try {
-      const updatedVisitor = await api.checkOutVisitor(id)
-      const visitorWithStatus: VisitorWithStatus = {
-        ...updatedVisitor,
-        status: "checked-out",
-        checkIn: updatedVisitor.checkInTime || ""
-      }
-      setVisitors(visitors.map(v => v.id === id ? visitorWithStatus : v))
-      toast.success("Visitor checked out successfully")
-    } catch (error) {
-      toast.error("Failed to check out visitor")
-      console.error(error)
-    }
+    redirect("/check-in-out")
   }
 
   const handleExport = async () => {
@@ -139,7 +115,7 @@ export function RecentVisitorsTable() {
     }
   }
 
-  const handlePrintPass = async (visitor: VisitorWithStatus) => {
+  const handlePrintPass = async (visitor) => {
     if(visitor.status === "cancelled") {
       toast.error("Visit already cancelled")
       return
@@ -152,6 +128,7 @@ export function RecentVisitorsTable() {
     setPassLoading(true)
     try {
       const passData = await visitorService.getVisitorDetails(visitor.id as string)
+      console.log(passData);
       const qrcode=await generateQRCode(passData)
       setVisitorPassData({ ...passData, status: visitor.status, checkIn: passData.checkInTime || "",qrcode:qrcode })
     } catch (error) {
@@ -173,17 +150,19 @@ export function RecentVisitorsTable() {
       const opt = {
         margin: [10, 10, 10, 10],
         filename: `${visitorPassData?.name}-visitor-pass.pdf`,
-        image: { type: 'jpeg', quality: 1 },
+        image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
-          scale: 3, // High-resolution rendering
+          scale: 4, 
           backgroundColor: '#ffffff',
           useCORS: true,
-          logging: true
+          logging: true,
+          removeContainer: true 
         },
         jsPDF: {
           unit: 'mm',
           format: 'a4',
-          orientation: 'portrait'
+          orientation: 'portrait',
+          compress: false 
         }
       }
   
@@ -418,7 +397,16 @@ export function RecentVisitorsTable() {
   <div className="text-base"><strong>Check-Out:</strong> {visitorPassData.checkOutTime ? format(new Date(visitorPassData.checkOutTime), "PPP p") : "--"}</div>
 
   <div className="pt-4 flex justify-center">
-    <img src={visitorPassData.qrcode} alt="QR Code" className="w-40 h-40 object-contain" />
+    <img 
+      src={visitorPassData.qrcode} 
+      alt="QR Code" 
+      className="w-64 h-64 object-contain mx-auto"
+      style={{
+        imageRendering: 'pixelated',
+        backgroundColor: 'white',
+        padding: '8px'
+      }}
+    />
   </div>
 </div>
 

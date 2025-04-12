@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import AuthService from "@/services/authService"
 
 export function ResetPasswordForm() {
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token")
   const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -35,23 +38,9 @@ export function ResetPasswordForm() {
       if (formData.password !== formData.confirmPassword) {
         throw new Error("Passwords do not match")
       }
+const authService=new AuthService()
+await authService.resetPassword(token as string,formData.password)
 
-      // Simulate API call with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // In a real app, you would make an API call to reset the password
-      // const token = new URLSearchParams(window.location.search).get('token')
-      // const response = await fetch('/api/auth/reset-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ token, password: formData.password }),
-      // })
-      
-      // if (!response.ok) {
-      //   throw new Error('Failed to reset password')
-      // }
-
-      // Success case - simulate successful password reset
       toast({
         title: "Password reset successful",
         description: "Your password has been reset. You can now sign in with your new password.",

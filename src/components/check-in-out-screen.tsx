@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { Html5Qrcode } from "html5-qrcode"
 import { Camera, CheckSquare, QrCode, UserCheck, UserMinus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,28 +12,24 @@ import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { VisitorService } from "@/services/visitorService"
 
 export function CheckInOutScreen() {
+  const visitorService = new VisitorService()
   const { toast } = useToast()
   const [visitorId, setVisitorId] = useState("")
   const [scanActive, setScanActive] = useState(false)
   const [visitorData, setVisitorData] = useState<any>(null)
+  const qrRef = useRef<HTMLDivElement>(null)
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
 
   const fetchVisitorData = async (id: string) => {
     try {
-      const res = await fetch("/api/visitors/find", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Failed to find visitor")
-
-      setVisitorData(data.visitor)
+      const res = await visitorService.getVisitorDetails(id)
+      setVisitorData(res)
       toast({ title: "Visitor found", description: "Visitor info retrieved successfully" })
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({ title: "Error", description: err.message })
     }
   }
 
@@ -41,64 +38,92 @@ export function CheckInOutScreen() {
       toast({
         title: "Error",
         description: "Please enter a visitor ID",
-        variant: "destructive",
       })
       return
     }
     fetchVisitorData(visitorId)
   }
 
-  const handleScanQR = () => {
+  const startQrScanner = async () => {
+    if (scanActive || !qrRef.current) return
+
+    const qrRegionId = qrRef.current.id
     setScanActive(true)
-    setTimeout(() => {
+
+    const qrCodeScanner = new Html5Qrcode(qrRegionId)
+    html5QrCodeRef.current = qrCodeScanner
+
+    try {
+      await qrCodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          console.log(decodedText);
+          
+          try {
+            const parsed = JSON.parse(decodedText)
+    
+            if (parsed?.id) {
+              await qrCodeScanner.stop()
+              qrCodeScanner.clear()
+              setScanActive(false)
+              fetchVisitorData(parsed.id)
+            } else {
+              throw new Error("Invalid QR payload: missing ID")
+            }
+          } catch (err) {
+            console.error("Invalid QR code format", err)
+            toast({
+              title: "Invalid QR Code",
+              description: "Please scan a valid visitor QR with proper ID.",
+            })
+            setScanActive(false)
+          }
+        },
+        (errorMessage:string) => {
+          console.log("Scan error:", errorMessage)
+        }
+      )
+    } catch (err: any) {
+      toast({ title: "Error", description: "QR scanning failed" })
       setScanActive(false)
-      fetchVisitorData("QR12345")
-    }, 3000)
+    }
+    
+  }
+
+  const stopQrScanner = async () => {
+    if (html5QrCodeRef.current) {
+      await html5QrCodeRef.current.stop()
+      await html5QrCodeRef.current.clear()
+      setScanActive(false)
+    }
   }
 
   const handleCheckIn = async () => {
     try {
-      const res = await fetch("/api/visitors/check-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: visitorData.id }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Failed to check in")
-
+      const res = await visitorService.updateVisitor(visitorData.id, "checked_in")
       setVisitorData((prev: any) => ({
         ...prev,
         status: "checked-in",
         actualArrival: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }))
-
       toast({ title: "Checked In", description: `${visitorData.name} is now checked in.` })
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({ title: "Error", description: err.message })
     }
   }
 
   const handleCheckOut = async () => {
     try {
-      const res = await fetch("/api/visitors/check-out", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: visitorData.id }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Failed to check out")
-
+      const res = await visitorService.updateVisitor(visitorData.id, "checked_out")
       setVisitorData((prev: any) => ({
         ...prev,
         status: "checked-out",
         actualDeparture: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }))
-
       toast({ title: "Checked Out", description: `${visitorData.name} has checked out.` })
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" })
+      toast({ title: "Error", description: err.message })
     }
   }
 
@@ -107,6 +132,13 @@ export function CheckInOutScreen() {
     setVisitorData(null)
   }
 
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current?.isScanning) {
+        html5QrCodeRef.current.stop().then(() => html5QrCodeRef.current?.clear())
+      }
+    }
+  }, [])
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -125,21 +157,13 @@ export function CheckInOutScreen() {
             <TabsContent value="scan" className="space-y-4">
               <div className="flex flex-col items-center justify-center gap-4">
                 <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                  {scanActive ? (
-                    <div className="animate-pulse flex flex-col items-center justify-center gap-2">
-                      <QrCode className="h-12 w-12 text-primary" />
-                      <p className="text-sm text-muted-foreground">Scanning...</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Camera className="h-12 w-12 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">QR scanner will appear here</p>
-                    </div>
-                  )}
+                  <div id="qr-reader" ref={qrRef} className="w-full h-full" />
                 </div>
-
-                <Button onClick={handleScanQR} disabled={scanActive} className="w-full">
+                <Button onClick={startQrScanner} disabled={scanActive} className="w-full">
                   {scanActive ? "Scanning..." : "Start Scanning"}
+                </Button>
+                <Button onClick={stopQrScanner} variant="outline" disabled={!scanActive} className="w-full">
+                  Stop Scanning
                 </Button>
               </div>
             </TabsContent>

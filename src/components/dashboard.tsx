@@ -1,14 +1,79 @@
 "use client"
 
-import { Calendar, CheckCircle, Clock, Users, XCircle } from "lucide-react"
+import { Calendar, CheckCircle, Clock, Loader2, Users, XCircle } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { VisitorFlowChart } from "@/components/visitor-flow-chart"
+import { VisitorFlowChart, visitorFlowDataProp } from "@/components/visitor-flow-chart"
 import { DepartmentVisitorChart } from "@/components/department-visitor-chart"
 import { RecentVisitorsTable } from "@/components/recent-visitor-table"
+import { useSession } from "next-auth/react"
+import { useEffect, useState } from "react"
+import { VisitorService } from "@/services/visitorService"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { usePathname, useRouter } from "next/navigation"
 
-export function SecurityDashboard() {
+interface visitorDataProp{
+  totalVisitorsToday:number
+  totalVisitorsYesterday:number
+}
+
+export interface visitorStatusProp {
+  status: {
+    approved: number,
+    checkedIn: number,
+    checkedOut: number,
+    pending: number,
+    rejected: number
+  }
+}
+
+export function DashBoard() {
+  const router = useRouter()
+  const pathname=usePathname()
+  const [visitorData, setVisitorData] = useState<visitorDataProp | null>(null)
+  const [visitorStatus, setVisitorStatus] = useState<visitorStatusProp | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  const {data:session} = useSession()
+  const visitorService = new VisitorService()
+
+  useEffect(() => {
+    async function getDashBoardData(){
+      if(session?.user?.id){
+        try {
+          setIsLoading(true)
+          const [totalVisitors, visitorsStatus] = await Promise.all([
+            session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getTotalVisitors(""):visitorService.getTotalVisitors(session.user.id),
+            session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitorsStatus(""):visitorService.getVisitorsStatus(session.user.id),
+         
+          ])
+          console.log("here are details",totalVisitors,visitorsStatus);
+          setVisitorData(totalVisitors)
+          setVisitorStatus(visitorsStatus as any)
+    
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    }
+    getDashBoardData()
+  }, [session?.user?.id])
+
+  if(session?.status === "unauthenticated"){
+    router.push("/auth/signin")
+    return null
+  }
+
+  if(session?.status === "loading" || isLoading){
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2">
@@ -42,7 +107,7 @@ export function SecurityDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">42</div>
+                <div className="text-2xl font-bold">{visitorData?.totalVisitorsToday || 0}</div>
                 <p className="text-xs text-muted-foreground">+18% from yesterday</p>
               </CardContent>
             </Card>
@@ -53,7 +118,7 @@ export function SecurityDashboard() {
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">36</div>
+                <div className="text-2xl font-bold">{visitorStatus?.status?.approved || 0}</div>
                 <p className="text-xs text-muted-foreground">85.7% approval rate</p>
               </CardContent>
             </Card>
@@ -64,7 +129,7 @@ export function SecurityDashboard() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">4</div>
+                <div className="text-2xl font-bold">{visitorStatus?.status?.pending || 0}</div>
                 <p className="text-xs text-muted-foreground">9.5% awaiting approval</p>
               </CardContent>
             </Card>
@@ -75,7 +140,7 @@ export function SecurityDashboard() {
                 <XCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">2</div>
+                <div className="text-2xl font-bold">{visitorStatus?.status?.rejected || 0}</div>
                 <p className="text-xs text-muted-foreground">4.8% rejection rate</p>
               </CardContent>
             </Card>
@@ -92,7 +157,9 @@ export function SecurityDashboard() {
               </CardContent>
             </Card>
 
-            {/* <Card className="col-span-1">
+          {
+            pathname.includes("admin") && (
+              <Card className="col-span-1">
               <CardHeader>
                 <CardTitle>Department Distribution</CardTitle>
                 <CardDescription>Visitors by department</CardDescription>
@@ -100,10 +167,15 @@ export function SecurityDashboard() {
               <CardContent>
                 <DepartmentVisitorChart />
               </CardContent>
-            </Card> */}
+            </Card>
+          
+            )
+          }
           </div>
 
-          <Card>
+          {
+            (pathname.includes("admin") || pathname.includes("security")) && (
+              <Card>
             <CardHeader>
               <CardTitle>Recent Visitors</CardTitle>
               <CardDescription>Latest visitor check-ins</CardDescription>
@@ -112,6 +184,8 @@ export function SecurityDashboard() {
               <RecentVisitorsTable />
             </CardContent>
           </Card>
+            )
+          }
         </TabsContent>
       </Tabs>
     </div>

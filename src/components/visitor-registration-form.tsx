@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VisitorService } from "@/services/visitorService"
 import { Visitor } from "@/services/api"
-import { EmailProvider, FCMProvider, NotifyService, SMSProvider, WhatsAppProvider } from "@/services/NotifyService"
 
 export function VisitorRegistrationForm() {
   const visitorService = new VisitorService()

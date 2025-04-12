@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import AuthService from "@/services/authService"
 
 export function ForgotPasswordForm() {
   const { toast } = useToast()
@@ -21,29 +22,14 @@ export function ForgotPasswordForm() {
     setIsLoading(true)
 
     try {
-      // Simulate API call with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // In a real app, you would make an API call to send a password reset email
-      // const response = await fetch('/api/auth/forgot-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email }),
-      // })
-      
-      // if (!response.ok) {
-      //   throw new Error('Failed to send reset email')
-      // }
-
-      // Success case - simulate successful email sending
+     const authService=new AuthService()
+     await authService.forgotPassword(email)
       toast({
         title: "Reset email sent",
         description: "If an account exists with that email, you will receive a password reset link.",
       })
-
-      // Redirect to sign in page after a delay
       setTimeout(() => {
-        router.push("/auth/sign-in")
+        router.push("/auth/signin")
       }, 2000)
     } catch (error) {
       console.error("Forgot password error:", error)

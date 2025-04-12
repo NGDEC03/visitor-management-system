@@ -1,5 +1,8 @@
 "use client"
 
+import { VisitorService } from "@/services/visitorService"
+import { useSession } from "next-auth/react"
+import { useEffect, useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 
 interface DataItem {
@@ -8,15 +11,25 @@ interface DataItem {
   color: string
 }
 
-const data: DataItem[] = [
-  { name: "IT", value: 12, color: "#8884d8" },
-  { name: "HR", value: 8, color: "#82ca9d" },
-  { name: "Finance", value: 5, color: "#ffc658" },
-  { name: "Marketing", value: 10, color: "#ff8042" },
-  { name: "Operations", value: 7, color: "#0088fe" },
-]
 
 export function DepartmentVisitorChart() {
+  const {data:session}=useSession()
+const [data,setData]=useState<DataItem[]>([])
+  useEffect(()=>{
+    async function modifyData(){
+      const visitorService=new VisitorService()
+      const departmentVisitors=await visitorService.getDepartmentVisitors(session?.user?.id as string)
+      const data=departmentVisitors.map((visitor)=>{
+        return {
+          name:visitor.department,
+          value:visitor.count,
+          color:visitor.department==="IT"?"#8884d8":visitor.department==="HR"?"#82ca9d":visitor.department==="Finance"?"#ffc658":visitor.department==="Marketing"?"#ff8042":visitor.department==="Operations"?"#0088fe":"#0088fe"
+        }
+      })
+      setData(data)
+    }
+    modifyData()
+  },[session?.user?.id])
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
