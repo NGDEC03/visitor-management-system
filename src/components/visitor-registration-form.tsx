@@ -199,11 +199,12 @@ export function VisitorRegistrationForm() {
                     <SelectValue placeholder="Select host" />
                   </SelectTrigger>
                   <SelectContent>
-                    {hosts.map((host, idx) => (
-                      <SelectItem key={idx} value={host.name}>
+                    {hosts.map((host, idx) => {
+if(host.role==="admin")return null
+                      return <SelectItem key={idx} value={host.name}>
                         {host.name} ({host.department})
                       </SelectItem>
-                    ))}
+                    })}
                   </SelectContent>
                 </Select>
               </div>

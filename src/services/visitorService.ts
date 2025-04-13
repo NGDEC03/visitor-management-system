@@ -18,6 +18,10 @@ export class VisitorService implements IVisitorReader, IVisitorWriter, IVisitorA
   async getFlowData(hostId: string): Promise<visitorFlowDataProp[]> {
     return this.httpClient.get<visitorFlowDataProp[]>(`/api/visitors/flow-data?hostId=${hostId}`)
   }
+  async getFlowDataByDate(): Promise<visitorFlowDataProp[]> {
+    return this.httpClient.get<visitorFlowDataProp[]>(`/api/visitors/flow-data`)
+  }
+
 
   async createVisitor(visitor: Visitor): Promise<Visitor> {
     return this.httpClient.post<Visitor>("/api/visitors", visitor)
@@ -27,8 +31,8 @@ export class VisitorService implements IVisitorReader, IVisitorWriter, IVisitorA
     return this.httpClient.put<Visitor>("/api/visitors/updateVisitor", { visitorId, status })
   }
 
-  async getDepartmentVisitors(hostId: string): Promise<departmentVisitorProp[]> {
-    return this.httpClient.get<departmentVisitorProp[]>(`/api/visitors/department-visitor?hostId=${hostId}`)
+  async getDepartmentVisitors(): Promise<departmentVisitorProp[]> {
+    return this.httpClient.get<departmentVisitorProp[]>(`/api/visitors/department-visitor`)
   }
 
   async getVisitorsByHost(hostId: string): Promise<Visitor[]> {

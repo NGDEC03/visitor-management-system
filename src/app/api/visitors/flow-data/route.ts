@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/generated/prisma"
+import { PrismaClient, Visitor } from "@/generated/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { startOfDay, endOfDay, getHours } from "date-fns"
 
@@ -9,39 +9,46 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url)
     const hostId = url.searchParams.get("hostId")
     const dateParam = url.searchParams.get("date") 
-    if (!hostId) {
-      return NextResponse.json({ error: "Host ID is required" }, { status: 400 })
-    }
-
     const selectedDate = dateParam ? new Date(dateParam) : new Date()
     const dayStart = startOfDay(selectedDate)
     const dayEnd = endOfDay(selectedDate)
-
-    const visitors = await prisma.visitor.findMany({
-      where: {
-        hostId,
-        createdAt: {
-          gte: dayStart,
-          lte: dayEnd
-        }
-      },
-      select: {
-        createdAt: true
+    let visitors:Visitor[]=[]
+  if(!hostId){
+   visitors=await prisma.visitor.findMany({
+    where:{
+      createdAt:{
+        gte:dayStart,
+        lte:dayEnd
       }
-    })
+    }
+  }) 
+
+  }
+
+ 
+
+    else {
+      visitors = await prisma.visitor.findMany({
+        where: {
+          hostId,
+          createdAt: {
+            gte: dayStart,
+            lte: dayEnd
+          }
+        }
+      })
+    } 
 
     const hourlyCount: { [hour: string]: number } = {}
-    for (let hour = 8; hour <= 17; hour++) {
+    for (let hour = 0; hour <= 23; hour++) {
       const label = formatHour(hour)
       hourlyCount[label] = 0
     }
 
     visitors.forEach(visitor => {
       const hour = visitor.createdAt.getHours()
-      if (hour >= 8 && hour <= 17) {
-        const label = formatHour(hour)
-        hourlyCount[label] += 1
-      }
+      const label = formatHour(hour)
+      hourlyCount[label] += 1
     })
 
     const result = Object.entries(hourlyCount).map(([hour, visitors]) => ({

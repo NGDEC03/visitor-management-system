@@ -49,7 +49,17 @@ export function ApprovalWorkflow() {
   useEffect(()=>{
     const fetchVisitors=async()=>{
       setLoading(true)
-      const data = (await visitorService.getVisitorsByHost(session?.user?.id as string)).visitors
+      let data:Visitor[]=[]
+      console.log(session?.user?.role);
+      
+      if(session?.user?.role!=="admin")
+       data = (await visitorService.getVisitorsByHost(session?.user?.id as string)).visitors
+      else{
+
+        data = await visitorService.getVisitors()
+        console.log("admin data",data);
+        
+      }
       console.log(data);
       
       
@@ -327,31 +337,35 @@ interface VisitorTableProps {
 function VisitorTable({ visitors, showActions, onApprove, onReject, loading }: VisitorTableProps) {
   return (
     <div className="rounded-md border relative min-h-[150px]">
-     {loading && (
-  <div className="absolute inset-0 flex items-center justify-center  z-10">
-    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-  </div>
-)}
-
-      <Table className={loading ? "opacity-30 pointer-events-none" : ""}>
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Visitor</TableHead>
             <TableHead>Purpose</TableHead>
-            <TableHead>Host</TableHead>
+            <TableHead>Arrival Time</TableHead>
             <TableHead>Department</TableHead>
+            <TableHead>Status</TableHead>
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visitors.length === 0 ? (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={showActions ? 6 : 5} className="h-24 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading visitors...</span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : visitors.length === 0 ? (
             <TableRow>
               <TableCell colSpan={showActions ? 6 : 5} className="h-24 text-center">
                 No visitors found.
               </TableCell>
             </TableRow>
           ) : (
-            visitors.map((visitor: Visitor) => (
+            visitors.map((visitor) => (
               <TableRow key={visitor.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -368,29 +382,66 @@ function VisitorTable({ visitors, showActions, onApprove, onReject, loading }: V
                   </div>
                 </TableCell>
                 <TableCell>{visitor.purpose}</TableCell>
-                <TableCell>{visitor.host}</TableCell>
+                <TableCell>{visitor.checkInTime ? new Date(visitor.checkInTime).toLocaleString() : "--"}</TableCell>
                 <TableCell>{visitor.department}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      visitor.status === VisitorStatus.PRE_APPROVED
+                        ? "default"
+                        : visitor.status === VisitorStatus.APPROVED
+                          ? "default"
+                          : visitor.status === VisitorStatus.REJECTED
+                            ? "secondary"
+                            : "outline"
+                    }
+                    className="flex w-24 justify-center items-center gap-1"
+                  >
+                    {visitor.status === VisitorStatus.PRE_APPROVED ? (
+                      <CheckCircle className="h-3 w-3 text-yellow-500" />
+                    ) : visitor.status === VisitorStatus.APPROVED ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : visitor.status === VisitorStatus.REJECTED ? (
+                      <XCircle className="h-3 w-3" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                    <span className="capitalize">
+                      {visitor.status === VisitorStatus.PRE_APPROVED
+                        ? "Pre-Approved"
+                        : visitor.status === VisitorStatus.APPROVED
+                          ? "Approved"
+                          : visitor.status === VisitorStatus.REJECTED
+                            ? "Rejected"
+                            : "Pending"}
+                    </span>
+                  </Badge>
+                </TableCell>
                 {showActions && (
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1 text-green-500 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => onApprove?.(visitor.id)}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => onReject?.(visitor.id)}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Reject
-                      </Button>
+                      {onApprove && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 text-green-500 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => onApprove(visitor.id)}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Approve
+                        </Button>
+                      )}
+                      {onReject && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => onReject(visitor.id)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 )}

@@ -1,4 +1,4 @@
-export type departmentVisitorProp={
-    department:string,
-    count:number
+export interface departmentVisitorProp {
+  name: string
+  count: number
 }

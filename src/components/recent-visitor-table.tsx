@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CheckCircle, Clock, MoreHorizontal, Search, Shield, Smile, UserCheck, UserX, XCircle } from "lucide-react"
+import { CheckCircle, Clock, Loader2, MoreHorizontal, Search, Shield, Smile, UserCheck, UserX, XCircle } from "lucide-react"
 import { redirect, usePathname, useRouter } from "next/navigation"
 import { format } from "date-fns"
 import jsPDF from 'jspdf'
@@ -242,7 +242,9 @@ const getStatusBadgeClass = (status) => {
   
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>
+    return <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-4 w-4 animate-spin" />
+    </div>
   }
 
   return (
