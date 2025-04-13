@@ -263,7 +263,7 @@ const getStatusBadgeClass = (status) => {
           <Button variant="outline" size="sm" onClick={handleExport}>
             Export
           </Button>
-          <Button size="sm" onClick={() => router.push(`/security/visitor-registration`)}>
+          <Button size="sm" onClick={() => router.push(`/${session?.user?.role}/visitor-registration`)}>
             Add Visitor
           </Button>
         </div>
