@@ -55,7 +55,7 @@ export function ApprovalWorkflow() {
         console.log("Fetched visitors:", fetchedVisitors);
         
       
-          fetchedVisitors.visitors.forEach((visitor:Visitor)=>{
+          fetchedVisitors.forEach((visitor:Visitor)=>{
             if (visitor.status === "pending") categorizedVisitors.pending.push(visitor)
             else if (visitor.status === "approved") categorizedVisitors.approved.push(visitor)
             else if (visitor.status === "rejected") categorizedVisitors.rejected.push(visitor)

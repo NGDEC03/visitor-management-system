@@ -23,45 +23,51 @@ export default function SignIn() {
   const router = useRouter()
   const callbackUrlParam = searchParams.get("callbackUrl")
 
-  // 🔁 Redirect once session is loaded and authenticated
+  const [hasTriedSignIn, setHasTriedSignIn] = useState(false)
+
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === "authenticated" && hasTriedSignIn) {
       const role = session?.user?.role
       const destination = callbackUrlParam || `/${role || "dashboard"}`
       router.push(destination)
     }
-  }, [status, session, callbackUrlParam, router])
+  }, [status, session, callbackUrlParam, router, hasTriedSignIn])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setHasTriedSignIn(true)
     try {
       const res = await signIn("user-login", {
-        redirect: false, // Important: Don't redirect here, handle it manually after session update
+        redirect: false, 
         email,
         password,
       })
-
+  
       if (res?.error) {
         toast({
           title: "Invalid credentials",
           description: res.error,
         })
+        setHasTriedSignIn(false) 
       } else {
         toast({
           title: "Signed in successfully",
           description: "Redirecting...",
         })
+       
       }
     } catch (error) {
       toast({
         title: "Error",
         description: "Something went wrong during sign in.",
       })
+      setHasTriedSignIn(false)
     } finally {
       setIsLoading(false)
     }
   }
+  
 
   return (
     

@@ -129,7 +129,7 @@ export function DashboardLayout({ children, role }: { children: React.ReactNode,
   }
 console.log(role,session?.user?.role);
 
-  if (role && role !== session?.user?.role) {
+  if (!role || role.toLocaleLowerCase() !== session?.user?.role?.toLocaleLowerCase()) {
     return <UnAuthorized />
   }
 
