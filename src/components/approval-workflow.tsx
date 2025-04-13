@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { CheckCircle, Filter, Search, XCircle } from "lucide-react"
+import { CheckCircle, Filter, Loader2, Search, XCircle, Clock } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { VisitorService } from "@/services/visitorService"
-import { Visitor } from "@/services/api"
+import { serviceProvider } from "@/services/serviceProvider"
+import { Visitor, VisitorStatus } from "@/services/api"
+import { LoadingSpinner } from "./ui/loading-spinner"
 
 interface SessionUser {
   name?: string | null
@@ -27,59 +28,50 @@ interface VisitorsData {
   pending: Visitor[]
   approved: Visitor[]
   rejected: Visitor[]
+  pre_approved: Visitor[]
 }
 
 export function ApprovalWorkflow() {
   const {data:session}=useSession()
-  const visitorService=new VisitorService()
+  const visitorService = serviceProvider.getVisitorService()
   const { toast } = useToast() 
-  
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+
   const [status, setStatus] = useState("pending")
   const [visitors, setVisitors] = useState<VisitorsData>({
     pending: [],
     approved: [],
-    rejected: []
+    rejected: [],
+    pre_approved: []
   })
   
   useEffect(()=>{
     const fetchVisitors=async()=>{
-      const categorizedVisitors: VisitorsData = {
-        pending: [],
-        approved: [],
-        rejected: [],
-      }
+      setLoading(true)
+      const data = (await visitorService.getVisitorsByHost(session?.user?.id as string)).visitors
+      console.log(data);
       
-      try {
-        const fetchedVisitors=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.id as string))
-        console.log("Fetched visitors:", fetchedVisitors);
-        
       
-          fetchedVisitors.forEach((visitor:Visitor)=>{
-            if (visitor.status === "pending") categorizedVisitors.pending.push(visitor)
-            else if (visitor.status === "approved") categorizedVisitors.approved.push(visitor)
-            else if (visitor.status === "rejected") categorizedVisitors.rejected.push(visitor)
-          })
-          console.log("Categorized visitors:", categorizedVisitors);
-          setVisitors(categorizedVisitors)
-       } catch (error) {
-        console.error("Error fetching visitors:", error);
-        setVisitors(categorizedVisitors)
-      }
+      
+      setVisitors({
+        pending: data.filter(v => v.status === VisitorStatus.PENDING),
+        approved: data.filter(v => v.status === VisitorStatus.APPROVED),
+        rejected: data.filter(v => v.status === VisitorStatus.CANCELLED),
+        pre_approved: data.filter(v => v.status === VisitorStatus.PRE_APPROVED)
+      })
+
+   
+      
     }
     fetchVisitors()
-  },[session?.user?.id, session?.user?.role])
+    setLoading(false)
+  },[])
 
-  const handleApprove = async (visitorId: string | undefined) => {
-    if (!visitorId) {
-      toast({
-        title: "Error",
-        description: "Invalid visitor ID"
-      })
-      return;
-    }
+  const handleApprove = async (visitorId: string) => {
     try {
-      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "approved")
+      setLoading(true)
+      const updatedVisitor = await visitorService.updateVisitor(visitorId, VisitorStatus.APPROVED)
       setVisitors(prev => ({
         ...prev,
         pending: prev.pending.filter(v => v.id !== visitorId),
@@ -87,29 +79,23 @@ export function ApprovalWorkflow() {
       }))
       toast({
         title: "Visitor approved",
-        description: "The visitor has been approved and notified.",
+        description: "The visitor has been approved successfully.",
       })
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to approve visitor"
+        description: "Failed to approve visitor. Please try again.",
       })
     }
+    finally{
+      setLoading(false)
+    } 
   }
 
-  const handleReject = async (visitorId: string | undefined) => {
-    
-    if (!visitorId) {
-      toast({
-        title: "Error",
-        description: "Invalid visitor ID"
-      })
-      return;
-    }
-    console.log("Rejecting visitor:", visitorId);
-    
+  const handleReject = async (visitorId: string) => {
     try {
-      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "cancelled")
+      setLoading(true)
+      const updatedVisitor = await visitorService.updateVisitor(visitorId, "cancelled")
       setVisitors(prev => ({
         ...prev,
         pending: prev.pending.filter(v => v.id !== visitorId),
@@ -117,17 +103,21 @@ export function ApprovalWorkflow() {
       }))
       toast({
         title: "Visitor rejected",
-        description: "The visitor has been rejected and notified.",
+        description: "The visitor has been rejected.",
       })
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to reject visitor",
+        description: "Failed to reject visitor. Please try again.",
       })
     }
+    finally{
+      setLoading(false)
+    } 
   }
   
   const getVisitorsByStatus = () => {
+    
     switch (status) {
       case "pending":
         return visitors.pending
@@ -140,24 +130,61 @@ export function ApprovalWorkflow() {
     }
   }
 
-  const filteredVisitors = getVisitorsByStatus().filter(
-    (visitor: Visitor) =>
-      visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (visitor.host || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      visitor.department.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredVisitors = useMemo(() => {
+    let filtered: Visitor[] = []
+    switch (status) {
+      case "pending":
+        filtered = visitors.pending
+        break
+      case "approved":
+        filtered = visitors.approved
+        break
+      case "rejected":
+        filtered = visitors.rejected
+        break
+      case "pre_approved":
+        filtered = visitors.pre_approved
+        break
+      case "all":
+        filtered = [...visitors.pending, ...visitors.pre_approved, ...visitors.approved, ...visitors.rejected]
+        break
+      default:
+        filtered = visitors.pending
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (v) =>
+          v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          v.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          v.purpose.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    return filtered
+  }, [visitors, searchQuery, status])
 
   const showTabs = session?.user?.role === "admin" 
     ? ["pending", "approved", "rejected", "all"]
-    : ["pending", "approved", "rejected"]
+    : session?.user?.role === "employee" 
+      ? ["pending", "pre_approved", "approved", "rejected"] 
+      : ["pending", "approved", "rejected", "all"]
 
+  // if (loading) {
+  //   return <div className="flex justify-center items-center h-screen">
+  //     <Loader2 className="h-8 w-8 animate-spin" />
+  //   </div>
+  // }
+if(loading){
+ return <LoadingSpinner/>
+}
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Visitor Approval Workflow</CardTitle>
           <CardDescription>
-            {session?.user?.role === "admin" 
+            {session?.user?.role === "admin"
               ? "Review and manage all visitor requests"
               : "Review and track visitor requests for your department"}
           </CardDescription>
@@ -168,10 +195,18 @@ export function ApprovalWorkflow() {
               <TabsList>
                 {showTabs.map((tab) => (
                   <TabsTrigger key={tab} value={tab}>
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === "pre_approved" ? "Pre-Approved" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                     {tab !== "all" && (
                       <Badge variant="outline" className="ml-2">
-                        {visitors[tab as keyof typeof visitors].length}
+                        {tab === "pending" 
+                          ? visitors.pending.length 
+                          : tab === "approved" 
+                            ? visitors.approved.length 
+                            : tab === "rejected" 
+                              ? visitors.rejected.length 
+                              : tab === "pre_approved" 
+                                ? visitors.pre_approved.length 
+                                : 0}
                       </Badge>
                     )}
                   </TabsTrigger>
@@ -184,9 +219,7 @@ export function ApprovalWorkflow() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <Button variant="outline" size="icon">
-                  <Filter className="h-4 w-4" />
-                </Button>
+                
               </div>
             </div>
 
@@ -197,6 +230,7 @@ export function ApprovalWorkflow() {
                   showActions={tab === "pending"}
                   onApprove={handleApprove}
                   onReject={handleReject}
+                  loading={loading}
                 />
               </TabsContent>
             ))}
@@ -223,6 +257,57 @@ export function ApprovalWorkflow() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {[...visitors.approved, ...visitors.rejected].length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No visitors found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  [...visitors.approved, ...visitors.rejected].map((visitor) => (
+                    <TableRow key={visitor.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={visitor.photo} alt={visitor.name} />
+                            <AvatarFallback>
+                              {visitor.name
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="font-medium">{visitor.name}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{visitor.purpose}</TableCell>
+                      <TableCell>{visitor.checkInTime ? new Date(visitor.checkInTime).toLocaleString() : "--"}</TableCell>
+                      <TableCell>{visitor.department}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            visitor.status === VisitorStatus.APPROVED
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="flex w-24 justify-center items-center gap-1"
+                        >
+                          {visitor.status === VisitorStatus.APPROVED ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : (
+                            <XCircle className="h-3 w-3" />
+                          )}
+                          <span className="capitalize">
+                            {visitor.status === VisitorStatus.APPROVED
+                              ? "Approved"
+                              : "Rejected"}
+                          </span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{visitor.checkInTime ? new Date(visitor.checkInTime).toLocaleDateString() : "--"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -236,19 +321,25 @@ interface VisitorTableProps {
   showActions: boolean
   onApprove?: (id: string) => void
   onReject?: (id: string) => void
+  loading: boolean
 }
 
-function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTableProps) {
+function VisitorTable({ visitors, showActions, onApprove, onReject, loading }: VisitorTableProps) {
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border relative min-h-[150px]">
+     {loading && (
+  <div className="absolute inset-0 flex items-center justify-center  z-10">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  </div>
+)}
+
+      <Table className={loading ? "opacity-30 pointer-events-none" : ""}>
         <TableHeader>
           <TableRow>
             <TableHead>Visitor</TableHead>
             <TableHead>Purpose</TableHead>
             <TableHead>Host</TableHead>
             <TableHead>Department</TableHead>
-          
             {showActions && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -286,7 +377,7 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
                         variant="outline"
                         size="sm"
                         className="h-8 gap-1 text-green-500 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => onApprove?.(visitor.id as string)}
+                        onClick={() => onApprove?.(visitor.id)}
                       >
                         <CheckCircle className="h-4 w-4" />
                         Approve
@@ -295,7 +386,7 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
                         variant="outline"
                         size="sm"
                         className="h-8 gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => onReject?.(visitor.id as string)}
+                        onClick={() => onReject?.(visitor.id)}
                       >
                         <XCircle className="h-4 w-4" />
                         Reject

@@ -27,8 +27,25 @@ interface VisitorPayload {
 }
 export async function GET(req: NextRequest):Promise<NextResponse<Visitor[]> | NextResponse<{error:string}>> {
   try {
-    const users = await prisma.visitor.findMany();
-    return NextResponse.json(users);
+    const url = new URL(req.url);
+    const hostId = url.searchParams.get("hostId");
+    
+    let whereClause = {};
+    
+    if (hostId) {
+      whereClause = {
+        hostId: hostId
+      };
+    }
+    
+    const visitors = await prisma.visitor.findMany({
+      where: whereClause,
+      include: {
+        host: true
+      }
+    });
+    
+    return NextResponse.json(visitors);
   } catch (error) {
     console.error("Error fetching visitors:", error);
     return NextResponse.json(

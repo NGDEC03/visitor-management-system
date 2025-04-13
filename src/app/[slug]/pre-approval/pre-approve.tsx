@@ -21,7 +21,7 @@ export default function PreApprovalPage() {
 
   return (
     <DashboardLayout role={slug as UserRole}>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto flex flex-col items-center py-6">
         <h1 className="text-3xl font-bold mb-6">Pre-Approval Scheduling</h1>
         <PreApprovalForm />
       </div>

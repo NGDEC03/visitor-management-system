@@ -30,7 +30,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
+import { LoadingSpinner } from "./ui/loading-spinner"
+
 export function PreApprovalForm() {
+  const [loading, setLoading] = useState(false)
   const { data: session } = useSession()
   const { toast } = useToast()
 
@@ -70,9 +73,14 @@ export function PreApprovalForm() {
     e.preventDefault()
 
     try {
-      console.log(session.user);
-      
-      console.log(formData)
+      setLoading(true)
+      if(formData.startTime>=formData.endTime){
+        toast({
+          title: "Invalid time",
+          description: "Start time must be before end time."
+        })
+        return
+      }
       const response = await fetch("/api/pre-approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,6 +110,7 @@ export function PreApprovalForm() {
         department: session?.user?.department,
         hostId: session?.user?.id
       }))
+      // setLoading(false)
     } catch (err) {
       toast({
         title: "Submission failed",
@@ -109,11 +118,18 @@ export function PreApprovalForm() {
        
       })
     }
+    finally{
+      setLoading(false)
+    }
   }
-
+if(loading){
+  return <div className="flex justify-center items-center h-screen">
+    <LoadingSpinner />
+  </div>
+}
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card>
+    <div className="grid gap-6 w-full max-w-full">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Schedule a Visitor</CardTitle>
           <CardDescription>
@@ -121,8 +137,8 @@ export function PreApprovalForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-6 w-full">
+            <div className="grid gap-4 md:grid-cols-2 w-full">
               <div className="space-y-2">
                 <Label htmlFor="visitorName">Visitor Name</Label>
                 <Input
@@ -230,7 +246,7 @@ export function PreApprovalForm() {
 
             <div className="space-y-2">
               <Label htmlFor="purpose">Purpose of Visit</Label>
-              <Select
+              <Select required
                 onValueChange={(val) => handleSelectChange("purpose", val)}
               >
                 <SelectTrigger>
@@ -248,18 +264,10 @@ export function PreApprovalForm() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                placeholder="Any special instructions..."
-              />
-            </div>
+            
 
             <div className="flex justify-end">
-              <Button type="submit">Generate Pre-Approval Pass</Button>
+              <Button type="submit" disabled={loading}>Generate Pre-Approval Pass</Button>
             </div>
           </form>
         </CardContent>

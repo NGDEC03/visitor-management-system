@@ -9,10 +9,16 @@ export const API_ENDPOINTS = {
   CHECK_OUT: (id: string) => `${API_BASE_URL}/visitors/${id}/check-out`,
   EXPORT_VISITORS: `${API_BASE_URL}/visitors/export`,
 }
-enum VisitorStatus{
-  PENDING="pending",
-  APPROVED="approved",
-  REJECTED="rejected"
+
+export enum VisitorStatus {
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  CANCELLED = "cancelled",
+  CHECKED_IN = "checked_in",
+  CHECKED_OUT = "checked_out",
+  PRE_APPROVED = "pre_approved"
+
 }
 
 // Visitor Type
@@ -28,8 +34,8 @@ export interface Visitor {
   checkInTime?: string
   checkOutTime?: string
   status: VisitorStatus 
-  host?:String
-  hostId?:String
+  host?: String
+  hostId?: String
 }
 
 

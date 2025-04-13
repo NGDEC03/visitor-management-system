@@ -122,7 +122,7 @@ export function DashboardLayout({ children, role }: { children: React.ReactNode,
       })
      setTimeout(() => {
       router.push("/auth/signin")
-     }, 500)
+     }, 150)
     }
   }, [status, router])
 
@@ -145,9 +145,12 @@ export function DashboardLayout({ children, role }: { children: React.ReactNode,
   if (!session?.user) {
     return null
   }
-console.log(role,session?.user?.role);
+  const combinedNavigationItems=[...adminNavigationItems,...employeeNavigationItems,...securityNavigationItems]
+  const containsPath = combinedNavigationItems.some(item => item.href===pathname)
 
-  if (!role || role.toLocaleLowerCase() !== session?.user?.role?.toLocaleLowerCase()) {
+console.log(containsPath);
+
+  if (!role || role.toLocaleLowerCase() !== session?.user?.role?.toLocaleLowerCase() || !containsPath) {
     return <UnAuthorized />
   }
 

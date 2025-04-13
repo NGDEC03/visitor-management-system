@@ -8,28 +8,30 @@ import { DepartmentVisitorChart } from "@/components/department-visitor-chart"
 import { RecentVisitorsTable } from "@/components/recent-visitor-table"
 import { useSession } from "next-auth/react"
 import { useEffect, useState, useMemo } from "react"
-import { VisitorService } from "@/services/visitorService"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePathname, useRouter } from "next/navigation"
 import UnAuthorized from "./unAuthorized"
 import { visitorDataProp, visitorStatusProp } from "@/types/visitor"
 import useSWR from "swr"
+import { serviceProvider } from "@/services/serviceProvider"
+import { Visitor, VisitorStatus } from "@/services/api"
 
 interface DashboardData {
-  totalVisitors: visitorDataProp | null
-  visitorsStatus: visitorStatusProp | null
+  totalVisitors: visitorDataProp
+  visitorsStatus: visitorStatusProp
 }
 
 export function DashBoard() {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  const visitorService = serviceProvider.getVisitorService()
   
   // Use SWR for data fetching with caching
   const { data: dashboardData, error, isLoading } = useSWR<DashboardData>(
     session?.user?.id ? ['/api/dashboard', session.user.id] : null,
-    async ([_, userId]: [string, string]) => {
-      const visitorService = new VisitorService()
+    async () => {
+      const userId = session?.user?.id || ""
       const [totalVisitors, visitorsStatus] = await Promise.all([
         session?.user?.role === "security" || session?.user?.role === "admin" 
           ? visitorService.getTotalVisitors("")
@@ -42,13 +44,26 @@ export function DashBoard() {
     },
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000 // Cache for 1 minute
+      dedupingInterval: 60000 
     }
   )
 
-  // Memoize the visitor data to prevent unnecessary re-renders
   const visitorData = useMemo(() => dashboardData?.totalVisitors || null, [dashboardData])
   const visitorStatus = useMemo(() => dashboardData?.visitorsStatus || null, [dashboardData])
+
+  const [visitors, setVisitors] = useState<Visitor[]>([])
+
+  useEffect(() => {
+    const fetchVisitors = async () => {
+      const data = await visitorService.getVisitors()
+      setVisitors(data)
+    }
+    fetchVisitors()
+  }, [])
+
+  const pendingVisitors = visitors.filter(v => v.status === VisitorStatus.PENDING)
+  const approvedVisitors = visitors.filter(v => v.status === VisitorStatus.APPROVED)
+  const rejectedVisitors = visitors.filter(v => v.status === VisitorStatus.REJECTED)
 
   if (sessionStatus === "unauthenticated") {
     router.push("/auth/signin")

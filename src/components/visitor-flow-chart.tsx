@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { VisitorService } from "@/services/visitorService"
 import { useSession } from "next-auth/react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
+import { serviceProvider } from "@/services/serviceProvider"
 
 export interface visitorFlowDataProp {
   hour: string
@@ -12,7 +12,7 @@ export interface visitorFlowDataProp {
 
 export function VisitorFlowChart() {
   const { data: session } = useSession()
-  const visitorService = new VisitorService()
+  const visitorService = serviceProvider.getVisitorService()
   const [flowData, setFlowData] = useState<visitorFlowDataProp[]>([])
 
   useEffect(() => {

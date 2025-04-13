@@ -12,40 +12,43 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { VisitorService } from "@/services/visitorService"
+import { serviceProvider } from "@/services/serviceProvider"
 import { Visitor } from "@/services/api"
 import { User } from "@/generated/prisma"
 import { useRouter } from "next/navigation"
+
 export function VisitorRegistrationForm() {
-  const router=useRouter()
-  const [hosts,setHosts]=useState<User[]>([])
-  const visitorService = new VisitorService()
+  const router = useRouter()
+  const [hosts, setHosts] = useState<User[]>([])
+  const visitorService = serviceProvider.getVisitorService()
   const { toast } = useToast()
-  const [details,setDetails]=useState({
-    name:"",
-    company:"",
-    email:"",
-    phone:"",
-    purpose:"",
-    department:"",
-    host:"",
-    notes:""
+  const [details, setDetails] = useState({
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    purpose: "",
+    department: "",
+    host: "",
+    notes: ""
   })
   const [photoSource, setPhotoSource] = useState<"upload" | "camera">("upload")
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  useEffect(()=>{
-    const fetchHosts=async()=>{
-      const hosts=await fetch("/api/getHosts")
-      const hostsData=await hosts.json()
-      setHosts(hostsData)  
+
+  useEffect(() => {
+    const fetchHosts = async () => {
+      const hosts = await fetch("/api/getHosts")
+      const hostsData = await hosts.json()
+      setHosts(hostsData)
     }
     fetchHosts()
-  },[])
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if(!photoPreview){
+    if (!photoPreview) {
       toast({
         title: "Photo is required",
         description: "Please take a photo of the visitor or upload an existing image.",
@@ -54,20 +57,19 @@ export function VisitorRegistrationForm() {
     }
     const visitorData = {
       ...details,
-      status:"pending",
+      status: "pending",
       photo: photoPreview
     }
-    const {notes,...filteredVisitorData}=visitorData
-    visitorService.visitor=filteredVisitorData as Visitor
-    const {visitor,host} = await visitorService.createVisitor()
+    const { notes, ...filteredVisitorData } = visitorData
+    const { visitor, host } = await visitorService.createVisitor(filteredVisitorData as Visitor)
     toast({
       title: "Visitor registered successfully",
       description: "The visitor has been registered and the host has been notified.",
     })
-    setTimeout(()=>{
-      const pathname=window.location.pathname
+    setTimeout(() => {
+      const pathname = window.location.pathname
       router.push(`/${pathname.split("/")[1]}/visitor-details`)
-    },250)
+    }, 250)
   }
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +98,15 @@ export function VisitorRegistrationForm() {
     }
   }
 
-  const handleCameraCapture = () => {
+  const handleCameraCapture = async () => {
+    const permission = await navigator.permissions.query({ name: "camera" })
+    if (permission.state === "denied") {
+      toast({
+        title: "Please Allow Camera Access",
+        description: "Please allow camera access to take a photo.",
+      })
+      return
+    }
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext("2d")
       if (context) {
@@ -130,29 +140,29 @@ export function VisitorRegistrationForm() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" placeholder="John Smith" required value={details.name} onChange={(e)=>setDetails({...details,name:e.target.value})} />
+                  <Input id="fullName" placeholder="John Smith" required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company">Company/Organization</Label>
-                  <Input id="company" placeholder="Acme Inc." value={details.company} onChange={(e)=>setDetails({...details,company:e.target.value})} />
+                  <Input id="company" placeholder="Acme Inc." value={details.company} onChange={(e) => setDetails({ ...details, company: e.target.value })} />
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="john@example.com" required value={details.email} onChange={(e)=>setDetails({...details,email:e.target.value})} />
+                  <Input id="email" type="email" placeholder="john@example.com" required value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" required value={details.phone} onChange={(e)=>setDetails({...details,phone:e.target.value})} />
+                  <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" required value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} />
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="purpose">Purpose of Visit</Label>
-                  <Select required value={details.purpose} onValueChange={(value) => setDetails({...details, purpose: value})}>
+                  <Select required value={details.purpose} onValueChange={(value) => setDetails({ ...details, purpose: value })}>
                     <SelectTrigger id="purpose">
                       <SelectValue placeholder="Select purpose" />
                     </SelectTrigger>
@@ -167,16 +177,16 @@ export function VisitorRegistrationForm() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
-                  <Select required value={details.department} onValueChange={(value) => setDetails({...details, department: value})}>
+                  <Select required value={details.department} onValueChange={(value) => setDetails({ ...details, department: value })}>
                     <SelectTrigger id="department">
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="it">IT</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="operations">Operations</SelectItem>
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="Finance">Finance</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Operations">Operations</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -184,16 +194,16 @@ export function VisitorRegistrationForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="host">Host Employee Name</Label>
-                <Select required value={details.host} onValueChange={(value) => setDetails({...details, host: value})}>
-                  <SelectTrigger id="host"> 
+                <Select required value={details.host} onValueChange={(value) => setDetails({ ...details, host: value })}>
+                  <SelectTrigger id="host">
                     <SelectValue placeholder="Select host" />
                   </SelectTrigger>
                   <SelectContent>
-                  {hosts.map((host,idx) => (
-        <SelectItem key={idx} value={host.name}>
-          {host.name} ({host.department})
-        </SelectItem>
-      ))}
+                    {hosts.map((host, idx) => (
+                      <SelectItem key={idx} value={host.name}>
+                        {host.name} ({host.department})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

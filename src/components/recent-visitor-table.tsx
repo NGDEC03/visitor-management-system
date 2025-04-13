@@ -29,10 +29,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { VisitorService } from "@/services/visitorService"
+import { serviceProvider } from "@/services/serviceProvider"
 import { generateQRCode } from "@/utils/generateQRCode"
 import { useSession } from "next-auth/react"
-import { Visitor } from "@/generated/prisma"
+import { Visitor, VisitorStatus } from "@/services/api"
 import { api } from "@/services/api"
 
 // interface VisitorWithStatus extends Visitor {
@@ -41,10 +41,9 @@ import { api } from "@/services/api"
 // }
 
 export function RecentVisitorsTable() {
-  const visitorService=new VisitorService()
   const {data:session}=useSession()
   const router = useRouter()
-  const [visitors, setVisitors] = useState([])
+  const [visitors, setVisitors] = useState<Visitor[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
@@ -54,12 +53,13 @@ export function RecentVisitorsTable() {
   const [passLoading, setPassLoading] = useState(false)
   const [visitorPassData, setVisitorPassData] = useState(null)
 
+  const visitorService = serviceProvider.getVisitorService()
+
   useEffect(() => {
     const fetchVisitors = async () => {
       try {
         console.log("fetching visitors");
-        
-        const data=await (session?.user?.role==="security" || session?.user?.role==="admin"?visitorService.getVisitors():visitorService.getVisitorsByHost(session?.user?.name as string))
+        const data = await visitorService.getVisitors(session?.user?.id);
         console.log(data);
         
         const visitorsWithStatus = data.map(visitor => ({
@@ -78,7 +78,7 @@ export function RecentVisitorsTable() {
     }
 
     fetchVisitors()
-  }, [])
+  }, [session?.user?.id])
 
   const filteredVisitors = useMemo(() => {
     return visitors.filter(
@@ -185,11 +185,11 @@ export function RecentVisitorsTable() {
       toast.error("Visit already cancelled")
       return
     }
-    if(visitor?.status==="checked-in"){
+    if(visitor?.status==="checked_in"){
       toast.error("Visit already checked in")
       return
     }
-    if(visitor?.status==="checked-out"){
+    if(visitor?.status==="checked_out"){
       toast.error("Visit already checked out")
       return
     }
@@ -202,8 +202,6 @@ export function RecentVisitorsTable() {
       console.error(error)
     }
   }
-  // import { CheckCircle, Clock, MoreHorizontal, Search, XCircle, Smile, Shield, UserCheck, UserX } from "lucide-react";
-
 const renderStatusBadge = (status) => {
  
   const icon =

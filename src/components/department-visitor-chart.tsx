@@ -1,47 +1,28 @@
 "use client"
 
-import { VisitorService } from "@/services/visitorService"
-import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import { useSession } from "next-auth/react"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { serviceProvider } from "@/services/serviceProvider"
+import { departmentVisitorProp } from "@/types/departmentVisitor"
 
-interface DataItem {
-  name: string
-  value: number
-  color: string
-}
-
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"]
 
 export function DepartmentVisitorChart() {
-  const {data:session}=useSession()
-const [data,setData]=useState<DataItem[]>([])
-  useEffect(()=>{
-    async function modifyData(){
-      const visitorService=new VisitorService()
-      const departmentVisitors=await visitorService.getDepartmentVisitors(session?.user?.id as string)
-      console.log('Department Visitors:', departmentVisitors) // Debug log
-      const data=departmentVisitors.map((visitor)=>{
-        const department = visitor.department.toLowerCase()
-        const color = 
-          department.includes('it') ? '#8884d8' :
-          department.includes('hr') ? '#82ca9d' :
-          department.includes('finance') ? '#ffc658' :
-          department.includes('marketing') ? '#ff8042' :
-          department.includes('operations') ? '#0088fe' :
-          '#ff7300'
-        
-        console.log('Department:', visitor.department, 'Color:', color) // Debug log
-        
-        return {
-          name:visitor.department,
-          value:visitor.count,
-          color
-        }
-      })
-      setData(data)
+  const { data: session } = useSession()
+  const visitorService = serviceProvider.getVisitorService()
+  const [data, setData] = useState<departmentVisitorProp[]>([])
+
+  useEffect(() => {
+    async function fetchData() {
+      if (session?.user?.id) {
+        const response = await visitorService.getDepartmentVisitors(session.user.id)
+        setData(response)
+      }
     }
-    modifyData()
-  },[session?.user?.id])
+    fetchData()
+  }, [session])
+
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -53,11 +34,11 @@ const [data,setData]=useState<DataItem[]>([])
             labelLine={false}
             outerRadius={80}
             fill="#8884d8"
-            dataKey="value"
+            dataKey="count"
             label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip

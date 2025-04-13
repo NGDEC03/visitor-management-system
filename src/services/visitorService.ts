@@ -1,57 +1,49 @@
-import { visitorStatusProp } from "@/types/visitor"
 import { Visitor } from "./api"
-import axios from "axios"
 import { visitorFlowDataProp } from "@/components/visitor-flow-chart"
 import { departmentVisitorProp } from "@/types/departmentVisitor"
+import { visitorStatusProp, visitorDataProp } from "@/types/visitor"
+import { HttpClient, IVisitorReader, IVisitorWriter, IVisitorAnalytics } from "./interfaces"
 
-export class VisitorService {
-    public id?:string
-    public visitor?:Visitor
-constructor(id?:string,visitor?:Visitor){
-this.id=id
-this.visitor=visitor
-}
+export class VisitorService implements IVisitorReader, IVisitorWriter, IVisitorAnalytics {
+  constructor(private httpClient: HttpClient) {}
+
   async getVisitors(): Promise<Visitor[]> {
-    const response = await axios.get<Visitor[]>(`/api/visitors`)
-    return response.data
+    return this.httpClient.get<Visitor[]>("/api/visitors")
   }
-  async getVisitorDetails(email:string): Promise<Visitor> {
-    const response = await axios.get<Visitor>(`/api/visitors/getVisitorByEmail?visitorEmail=${email}`)
-    return response.data
+
+  async getVisitorDetails(email: string): Promise<Visitor> {
+    return this.httpClient.get<Visitor>(`/api/visitors/getVisitorByEmail?visitorEmail=${email}`)
   }
-  async getFlowData(hostId:string): Promise<visitorFlowDataProp[]> {
-    const response = await axios.get<visitorFlowDataProp[]>(`/api/visitors/flow-data?hostId=${hostId}`)
-    return response.data
+
+  async getFlowData(hostId: string): Promise<visitorFlowDataProp[]> {
+    return this.httpClient.get<visitorFlowDataProp[]>(`/api/visitors/flow-data?hostId=${hostId}`)
   }
-  async createVisitor() {
-    console.log("service invoked");
-    const response = await axios.post(`/api/visitors`, this.visitor)
-    return response.data
+
+  async createVisitor(visitor: Visitor): Promise<Visitor> {
+    return this.httpClient.post<Visitor>("/api/visitors", visitor)
   }
-  async updateVisitor(visitorId: string,status:string): Promise<Visitor> {
-    console.log(visitorId,status);
-    
-    const response = await axios.put<Visitor>(`/api/visitors/updateVisitor`, {visitorId,status})
-    return response.data
+
+  async updateVisitor(visitorId: string, status: string): Promise<Visitor> {
+    return this.httpClient.put<Visitor>("/api/visitors/updateVisitor", { visitorId, status })
   }
-  async getDepartmentVisitors(hostId:string): Promise<departmentVisitorProp[]> {
-    const response = await axios.get<departmentVisitorProp[]>(`/api/visitors/department-visitor?hostId=${hostId}`)
-    return response.data
+
+  async getDepartmentVisitors(hostId: string): Promise<departmentVisitorProp[]> {
+    return this.httpClient.get<departmentVisitorProp[]>(`/api/visitors/department-visitor?hostId=${hostId}`)
   }
-  async getVisitorsByHost(hostId:string): Promise<Visitor[]> {
-    const response = await axios.get<Visitor[]>(`/api/visitors/getByHost?hostId=${hostId}`)
-    return response.data
+
+  async getVisitorsByHost(hostId: string): Promise<Visitor[]> {
+    return this.httpClient.get<Visitor[]>(`/api/visitors/getByHost?hostId=${hostId}`)
   }
-  async getTotalVisitors(hostId:string) {
-    const response = await axios.get(`/api/visitors/total-visitor?hostId=${hostId}`)
-    return response.data
+
+  async getTotalVisitors(hostId: string): Promise<visitorDataProp> {
+    return this.httpClient.get<visitorDataProp>(`/api/visitors/total-visitor?hostId=${hostId}`)
   }
-async getVisitorsStatus(hostId:string): Promise<visitorStatusProp> {
-    const response = await axios.get(`/api/visitors/status?hostId=${hostId}`)
-    return response.data
-}
-async getVisitorStatus():Promise<visitorStatusProp>{
-  const response = await axios.get(`/api/visitors/status`)
-  return response.data
-}
+
+  async getVisitorsStatus(hostId: string): Promise<visitorStatusProp> {
+    return this.httpClient.get<visitorStatusProp>(`/api/visitors/status?hostId=${hostId}`)
+  }
+
+  async getVisitorStatus(): Promise<visitorStatusProp> {
+    return this.httpClient.get<visitorStatusProp>("/api/visitors/status")
+  }
 }

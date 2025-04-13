@@ -9,24 +9,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import AuthService from "@/services/authService"
+import { serviceProvider } from "@/services/serviceProvider"
 
 export function ForgotPasswordForm() {
   const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
+  const authService = serviceProvider.getAuthService()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-     const authService=new AuthService()
-     await authService.forgotPassword(email)
+      await authService.forgotPassword(email)
       toast({
         title: "Reset email sent",
-        description: "If an account exists with that email, you will receive a password reset link.",
+        description: "Please check your email for password reset instructions.",
       })
       setTimeout(() => {
         router.push("/auth/signin")
@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
     } catch (error) {
       console.error("Forgot password error:", error)
       toast({
-        title: "Something went wrong",
+        title: "Error",
         description: "Failed to send reset email. Please try again.",
       })
     } finally {
@@ -51,11 +51,10 @@ export function ForgotPasswordForm() {
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="email"
             />
           </div>
         </CardContent>
@@ -66,7 +65,7 @@ export function ForgotPasswordForm() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending reset link
               </>
             ) : (
-              "Send reset link"
+              "Send Reset Link"
             )}
           </Button>
         </CardFooter>

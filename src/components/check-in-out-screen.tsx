@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Camera, CheckSquare, QrCode, UserCheck, UserMinus, CheckCircle, XCircle, Clock } from "lucide-react"
 import jsQR from "jsqr"
+import { useSession } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,14 +13,17 @@ import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { VisitorService } from "@/services/visitorService"
+import { serviceProvider } from "@/services/serviceProvider"
+import { Visitor, VisitorStatus } from "@/services/api"
 
 export function CheckInOutScreen() {
-  const visitorService = new VisitorService()
+  const { data: session } = useSession()
+  const visitorService = serviceProvider.getVisitorService()
   const { toast } = useToast()
-  const [visitorEmail, setVisitorEmail] = useState("")
+  const [email, setEmail] = useState("")
+  const [visitor, setVisitor] = useState<Visitor | null>(null)
+  const [loading, setLoading] = useState(false)
   const [scanActive, setScanActive] = useState(false)
-  const [visitorData, setVisitorData] = useState<any>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -27,7 +31,7 @@ export function CheckInOutScreen() {
   const fetchVisitorData = async (email: string) => {
     try {
       const res = await visitorService.getVisitorDetails(email)
-      setVisitorData(res)
+      setVisitor(res)
       toast({ title: "Visitor found", description: "Visitor info retrieved successfully" })
     } catch (err: any) {
       toast({ title: "Visitor Not Found", description: err.message })
@@ -35,14 +39,14 @@ export function CheckInOutScreen() {
   }
 
   const handleManualCheckIn = () => {
-    if (!visitorEmail) {
+    if (!email) {
       toast({
         title: "Error",
         description: "Please enter a visitor Email",
       })
       return
     }
-    fetchVisitorData(visitorEmail)
+    fetchVisitorData(email)
   }
 
   const startQrScanner = async () => {
@@ -111,13 +115,13 @@ export function CheckInOutScreen() {
 
   const handleCheckIn = async () => {
     try {
-      const res = await visitorService.updateVisitor(visitorData.id, "checked_in")
-      setVisitorData((prev: any) => ({
+      const res = await visitorService.updateVisitor(visitor!.id, "checked_in")
+      setVisitor((prev: any) => ({
         ...prev,
         status: "checked-in",
         actualArrival: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }))
-      toast({ title: "Checked In", description: `${visitorData.name} is now checked in.` })
+      toast({ title: "Checked In", description: `${visitor!.name} is now checked in.` })
     } catch (err: any) {
       toast({ title: "Error", description: err.message })
     }
@@ -125,21 +129,21 @@ export function CheckInOutScreen() {
 
   const handleCheckOut = async () => {
     try {
-      const res = await visitorService.updateVisitor(visitorData.id, "checked_out")
-      setVisitorData((prev: any) => ({
+      const res = await visitorService.updateVisitor(visitor!.id, "checked_out")
+      setVisitor((prev: any) => ({
         ...prev,
         status: "checked-out",
         actualDeparture: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }))
-      toast({ title: "Checked Out", description: `${visitorData.name} has checked out.` })
+      toast({ title: "Checked Out", description: `${visitor!.name} has checked out.` })
     } catch (err: any) {
       toast({ title: "Error", description: err.message })
     }
   }
 
   const resetVisitor = () => {
-    setVisitorEmail("")
-    setVisitorData(null)
+    setEmail("")
+    setVisitor(null)
   }
 
   useEffect(() => {
@@ -147,7 +151,6 @@ export function CheckInOutScreen() {
       stopQrScanner()
     }
   }, [])
-console.log(visitorData);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -193,8 +196,8 @@ console.log(visitorData);
                     <Input
                       id="visitorEmail"
                       placeholder="Enter visitor Email"
-                      value={visitorEmail}
-                      onChange={(e) => setVisitorEmail(e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                     <Button onClick={handleManualCheckIn}>Find</Button>
                   </div>
@@ -211,54 +214,54 @@ console.log(visitorData);
           <CardDescription>View visitor details and check in/out status</CardDescription>
         </CardHeader>
         <CardContent>
-          {visitorData ? (
+          {visitor ? (
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={visitorData.photo} alt={visitorData.name} />
+                  <AvatarImage src={visitor.photo} alt={visitor.name} />
                   <AvatarFallback>
-                    {visitorData.name
+                    {visitor.name
                       .split(" ")
                       .map((n: string) => n[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-semibold">{visitorData.name}</h3>
-                  <p className="text-sm text-muted-foreground">{visitorData.company}</p>
+                  <h3 className="text-lg font-semibold">{visitor.name}</h3>
+                  <p className="text-sm text-muted-foreground">{visitor.company}</p>
                   <Badge
                     variant={
-                      visitorData.status === "checked-in"
+                      visitor.status === "checked-in"
                         ? "default"
-                        : visitorData.status === "checked-out"
+                        : visitor.status === "checked-out"
                           ? "secondary"
-                          : visitorData.status === "pre_approved"
+                          : visitor.status === "pre_approved"
                             ? "default"
-                            : visitorData.status === "approved"
+                            : visitor.status === "approved"
                               ? "default"
                               : "outline"
                     }
                     className="flex w-24 justify-center items-center gap-1"
                   >
-                    {visitorData.status === "checked-in" ? (
+                    {visitor.status === "checked-in" ? (
                       <CheckCircle className="h-3 w-3" />
-                    ) : visitorData.status === "checked-out" ? (
+                    ) : visitor.status === "checked-out" ? (
                       <XCircle className="h-3 w-3" />
-                    ) : visitorData.status === "pre_approved" ? (
+                    ) : visitor.status === "pre_approved" ? (
                       <CheckCircle className="h-3 w-3 text-green-500" />
-                    ) : visitorData.status === "approved" ? (
+                    ) : visitor.status === "approved" ? (
                       <CheckCircle className="h-3 w-3 text-green-500" />
                     ) : (
                       <Clock className="h-3 w-3" />
                     )}
                     <span className="capitalize">
-                      {visitorData.status === "checked_in"
+                      {visitor.status === "checked_in"
                         ? "Checked In"
-                        : visitorData.status === "checked_out"
+                        : visitor.status === "checked_out"
                           ? "Checked Out"
-                          : visitorData.status === "pre_approved"
+                          : visitor.status === "pre_approved"
                             ? "Pre Approved"
-                            : visitorData.status === "approved"
+                            : visitor.status === "approved"
                               ? "Approved"
                               : "Pending"}
                     </span>
@@ -269,44 +272,44 @@ console.log(visitorData);
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Purpose:</span>
-                  <span className="text-sm font-medium">{visitorData.purpose}</span>
+                  <span className="text-sm font-medium">{visitor.purpose}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Host:</span>
-                  <span className="text-sm font-medium">{visitorData.host}</span>
+                  <span className="text-sm font-medium">{visitor.host}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Department:</span>
-                  <span className="text-sm font-medium">{visitorData.department}</span>
+                  <span className="text-sm font-medium">{visitor.department}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Expected Time:</span>
                   <span className="text-sm font-medium">
-                    {visitorData.arrivalTime} - {visitorData.departureTime}
+                    {visitor.arrivalTime} - {visitor.departureTime}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Date:</span>
-                  <span className="text-sm font-medium">{visitorData.date}</span>
+                  <span className="text-sm font-medium">{visitor.date}</span>
                 </div>
 
-                {visitorData.status === "checked-in" && (
+                {visitor.status === "checked-in" && (
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Actual Arrival:</span>
-                    <span className="text-sm font-medium">{visitorData.actualArrival}</span>
+                    <span className="text-sm font-medium">{visitor.actualArrival}</span>
                   </div>
                 )}
 
-                {visitorData.status === "checked-out" && (
+                {visitor.status === "checked-out" && (
                   <>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Actual Arrival:</span>
-                      <span className="text-sm font-medium">{visitorData.actualArrival}</span>
+                      <span className="text-sm font-medium">{visitor.actualArrival}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">Actual Departure:</span>
-                      <span className="text-sm font-medium">{visitorData.actualDeparture}</span>
+                      <span className="text-sm font-medium">{visitor.actualDeparture}</span>
                     </div>
                   </>
                 )}
@@ -314,14 +317,14 @@ console.log(visitorData);
 
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  {(visitorData.status === "approved" || visitorData.status === "pre_approved") && (
+                  {(visitor.status === "approved" || visitor.status === "pre_approved") && (
                     <Button onClick={handleCheckIn} className="w-full">
                       <UserCheck className="mr-2 h-4 w-4" />
                       Check In
                     </Button>
                   )}
 
-                  {visitorData.status === "checked_in" && (
+                  {visitor.status === "checked_in" && (
                     <Button onClick={handleCheckOut} className="w-full">
                       <UserMinus className="mr-2 h-4 w-4" />
                       Check Out
