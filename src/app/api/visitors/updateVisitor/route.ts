@@ -14,15 +14,16 @@ export async function PUT(req:NextRequest):Promise<NextResponse<Visitor | {error
             pending="pending",
             approved="approved",
             checked_in="checked_in",
-            checked_out="checked_out"
+            checked_out="checked_out",
+            cancelled="cancelled"
         }
         console.log("status",status);
         
         switch (status) {
             case VisitorStatus.rejected:
+            case VisitorStatus.cancelled:
             case VisitorStatus.pending:
             case VisitorStatus.approved:
-              console.log("case: approve/reject/pending")
           
               updatedVisitor = await prisma.visitor.update({
                 where: {

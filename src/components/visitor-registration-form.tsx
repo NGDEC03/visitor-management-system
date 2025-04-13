@@ -15,8 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VisitorService } from "@/services/visitorService"
 import { Visitor } from "@/services/api"
 import { User } from "@/generated/prisma"
-
+import { useRouter } from "next/navigation"
 export function VisitorRegistrationForm() {
+  const router=useRouter()
   const [hosts,setHosts]=useState<User[]>([])
   const visitorService = new VisitorService()
   const { toast } = useToast()
@@ -38,7 +39,7 @@ export function VisitorRegistrationForm() {
     const fetchHosts=async()=>{
       const hosts=await fetch("/api/getHosts")
       const hostsData=await hosts.json()
-      setHosts(hostsData)
+      setHosts(hostsData)  
     }
     fetchHosts()
   },[])
@@ -63,6 +64,10 @@ export function VisitorRegistrationForm() {
       title: "Visitor registered successfully",
       description: "The visitor has been registered and the host has been notified.",
     })
+    setTimeout(()=>{
+      const pathname=window.location.pathname
+      router.push(`/${pathname.split("/")[1]}/visitor-details`)
+    },250)
   }
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,10 +198,6 @@ export function VisitorRegistrationForm() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea id="notes" placeholder="Any special requirements or information..." value={details.notes} onChange={(e)=>{}} />
-              </div>
             </div>
 
             <div className="flex justify-end">

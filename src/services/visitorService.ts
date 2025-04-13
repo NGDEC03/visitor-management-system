@@ -29,6 +29,8 @@ this.visitor=visitor
     return response.data
   }
   async updateVisitor(visitorId: string,status:string): Promise<Visitor> {
+    console.log(visitorId,status);
+    
     const response = await axios.put<Visitor>(`/api/visitors/updateVisitor`, {visitorId,status})
     return response.data
   }

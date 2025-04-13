@@ -69,18 +69,72 @@ await notifyHost(visitor,host)
 
 async function notifyHost(visitor: VisitorPayload, host: User):Promise<void> {
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-      <h2 style="color: #333; margin-bottom: 20px;">New Visitor Request</h2>
-      <div style="background-color: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-        <p style="margin: 0 0 10px 0;"><strong>Visitor Name:</strong> ${visitor.name}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Company:</strong> ${visitor.company}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Purpose:</strong> ${visitor.purpose}</p>
-        <p style="margin: 0 0 10px 0;"><strong>Department:</strong> ${visitor.department}</p>
-      </div>
-      <p style="color: #666; margin-bottom: 20px;">Please review and approve this visitor request at your earliest convenience.</p>
-      <a href="localhost:3000/admin" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View in Dashboard</a>
-    </div>
-  `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+      <tr>
+        <td style="padding: 30px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="text-align: center; padding-bottom: 30px;">
+                <h1 style="color: #0066cc; margin: 0; font-size: 24px; line-height: 32px;">⚡ New Visitor Alert ⚡</h1>
+              </td>
+            </tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e9ecef;">
+            <tr>
+              <td style="padding: 20px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                  <tr>
+                    <td width="24" style="padding-right: 10px;">👤</td>
+                    <td>
+                      <p style="margin: 0; color: #666666; font-size: 12px;">VISITOR NAME</p>
+                      <p style="margin: 5px 0 0 0; color: #000000; font-size: 16px;">${visitor.name}</p>
+                    </td>
+                  </tr>
+                </table>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                  <tr>
+                    <td width="24" style="padding-right: 10px;">🏢</td>
+                    <td>
+                      <p style="margin: 0; color: #666666; font-size: 12px;">COMPANY</p>
+                      <p style="margin: 5px 0 0 0; color: #000000; font-size: 16px;">${visitor.company}</p>
+                    </td>
+                  </tr>
+                </table>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
+                  <tr>
+                    <td width="24" style="padding-right: 10px;">🎯</td>
+                    <td>
+                      <p style="margin: 0; color: #666666; font-size: 12px;">PURPOSE</p>
+                      <p style="margin: 5px 0 0 0; color: #000000; font-size: 16px;">${visitor.purpose}</p>
+                    </td>
+                  </tr>
+                </table>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td width="24" style="padding-right: 10px;">🏬</td>
+                    <td>
+                      <p style="margin: 0; color: #666666; font-size: 12px;">DEPARTMENT</p>
+                      <p style="margin: 5px 0 0 0; color: #000000; font-size: 16px;">${visitor.department}</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 30px;">
+            <tr>
+              <td style="background-color: #e8f4fe; padding: 20px; border-radius: 8px; text-align: center;">
+                <p style="margin: 0; color: #0066cc; font-size: 14px;">Please review this request in your dashboard and take appropriate action.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+`;
+
 
   await sendMail({
     recipient: host.email,

@@ -178,6 +178,8 @@ export function RecentVisitorsTable() {
   
 
   const handleCancelVisit = async (id: string) => {
+    console.log(id);
+    
     const visitor = visitors.find(v => v.id === id)
     if(visitor?.status==='cancelled'){
       toast.error("Visit already cancelled")
@@ -192,7 +194,7 @@ export function RecentVisitorsTable() {
       return
     }
     try {
-      await api.cancelVisit(id)
+      await visitorService.updateVisitor(id,"cancelled")
       toast.success("Visit cancelled successfully")
       setVisitors(visitors.map(v => v.id === id ? {...v, status: "cancelled"} : v))
     } catch (error) {
@@ -200,7 +202,7 @@ export function RecentVisitorsTable() {
       console.error(error)
     }
   }
-  const renderStatusBadge = (status: VisitorStatus) => {
+  const renderStatusBadge = (status) => {
     const icon =
       status === "checked-in" ? <CheckCircle className="h-3 w-3" /> :
         status === "pending" ? <Clock className="h-3 w-3" /> :
@@ -310,16 +312,7 @@ export function RecentVisitorsTable() {
                           Print pass
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        {visitor.status === "pending" && (
-                          <DropdownMenuItem onClick={() => handleCheckIn(visitor.id)}>
-                            Check in
-                          </DropdownMenuItem>
-                        )}
-                        {visitor.status === "checked-in" && (
-                          <DropdownMenuItem onClick={() => router.push(`/security/check-in-out`)}>
-                            Check out
-                          </DropdownMenuItem>
-                        )}
+                        
                         <DropdownMenuItem className="text-destructive" onClick={() => handleCancelVisit(visitor.id)}>
                           Cancel visit
                         </DropdownMenuItem>
