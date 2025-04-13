@@ -31,6 +31,11 @@ export default function SignIn() {
       const destination = callbackUrlParam || `/${role || "dashboard"}`
       router.push(destination)
     }
+   if(session?.user?.role){
+      const role = session?.user?.role
+      const destination = callbackUrlParam || `/${role || "dashboard"}`
+      router.push(destination)
+   }
   }, [status, session, callbackUrlParam, router, hasTriedSignIn])
 
   const handleSubmit = async (e: React.FormEvent) => {

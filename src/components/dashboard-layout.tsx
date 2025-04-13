@@ -19,7 +19,7 @@ import {
   UserSearch,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
-import { LoadingSpinner } from "./ui/loading-spinner"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { UserRole } from "@/generated/prisma"
 
 import { cn } from "@/lib/utils"
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/sidebar"
 import UnauthenticatedPage from "./un-authenticated"
 import UnAuthorized from "./unAuthorized"
+import { useToast } from "@/hooks/use-toast"
 
 const adminNavigationItems = [
   {
@@ -105,16 +106,33 @@ const securityNavigationItems = [
 
 export function DashboardLayout({ children, role }: { children: React.ReactNode, role: UserRole }) {
   const router = useRouter()
+  const { toast } = useToast()
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [activeItem, setActiveItem] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
+      toast({
+        title: "Unauthorized",
+        description: "You are not authorized to access this page",
+      })
+     setTimeout(() => {
       router.push("/auth/signin")
+     }, 500)
     }
   }, [status, router])
+
+  useEffect(() => {
+    setIsNavigating(true)
+    const timer = setTimeout(() => {
+      setIsNavigating(false)
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [pathname])
 
   if (status === "loading") {
     return (
@@ -205,9 +223,12 @@ console.log(role,session?.user?.role);
             {navigationItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                  <Link href={item.href}>
+                  <Link href={item.href} onClick={() => setActiveItem(item.href)}>
                     <item.icon />
                     <span>{item.title}</span>
+                    {activeItem === item.href && (
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -237,6 +258,7 @@ console.log(role,session?.user?.role);
         </header>
         <main className="flex-1 p-4">
   <div className="mx-auto w-full max-w-7xl">
+
     {children}
   </div>
 </main>

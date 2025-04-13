@@ -98,6 +98,7 @@ export function ApprovalWorkflow() {
   }
 
   const handleReject = async (visitorId: string | undefined) => {
+    
     if (!visitorId) {
       toast({
         title: "Error",
@@ -105,8 +106,10 @@ export function ApprovalWorkflow() {
       })
       return;
     }
+    console.log("Rejecting visitor:", visitorId);
+    
     try {
-      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "rejected")
+      const updatedVisitor = await visitorService.updateVisitor(visitorId as string, "cancelled")
       setVisitors(prev => ({
         ...prev,
         pending: prev.pending.filter(v => v.id !== visitorId),
@@ -283,7 +286,7 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
                         variant="outline"
                         size="sm"
                         className="h-8 gap-1 text-green-500 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => onApprove?.(visitor.id)}
+                        onClick={() => onApprove?.(visitor.id as string)}
                       >
                         <CheckCircle className="h-4 w-4" />
                         Approve
@@ -292,7 +295,7 @@ function VisitorTable({ visitors, showActions, onApprove, onReject }: VisitorTab
                         variant="outline"
                         size="sm"
                         className="h-8 gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => onReject?.(visitor.id)}
+                        onClick={() => onReject?.(visitor.id as string)}
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
