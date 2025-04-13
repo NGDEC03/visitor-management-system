@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CheckCircle, Clock, MoreHorizontal, Search, XCircle } from "lucide-react"
+import { CheckCircle, Clock, MoreHorizontal, Search, Shield, Smile, UserCheck, UserX, XCircle } from "lucide-react"
 import { redirect, usePathname, useRouter } from "next/navigation"
 import { format } from "date-fns"
 import jsPDF from 'jspdf'
@@ -202,26 +202,46 @@ export function RecentVisitorsTable() {
       console.error(error)
     }
   }
-  const renderStatusBadge = (status) => {
-    const icon =
-      status === "checked-in" ? <CheckCircle className="h-3 w-3" /> :
-        status === "pending" ? <Clock className="h-3 w-3" /> :
-          status === "approved" ? <CheckCircle className="h-3 w-3 text-green-500" /> :
-            <XCircle className="h-3 w-3" />
+  // import { CheckCircle, Clock, MoreHorizontal, Search, XCircle, Smile, Shield, UserCheck, UserX } from "lucide-react";
 
-    const variant =
-      status === "checked-in" ? "default" :
-        status === "pending" ? "outline" :
-          status === "approved" ? "default" :
-            "destructive"
+const renderStatusBadge = (status) => {
+ 
+  const icon =
+    status === "checked_in" ? <UserCheck className="h-3 w-3 text-green-500" /> :
+    status === "checked_out" ? <UserX className="h-3 w-3 text-gray-500" /> :
+    status === "pre_approved" ? <Shield className="h-3 w-3 text-blue-500" /> :
+    status === "approved" ? <CheckCircle className="h-3 w-3 text-teal-500" /> :
+    status === "pending" ? <Clock className="h-3 w-3 text-yellow-500" /> :
+    status === "cancelled" ? <XCircle className="h-3 w-3 text-red-500" /> :
+    <XCircle className="h-3 w-3 text-gray-500" /> 
 
-    return (
-      <Badge variant={variant} className="flex w-24 justify-center items-center gap-1">
-        {icon}
-        <span className="capitalize">{status}</span>
-      </Badge>
-    )
+  return (
+    <Badge className={`flex w-24 justify-center items-center gap-1 ${getStatusBadgeClass(status)}`}>
+      {icon}
+      <span className="capitalize">{status}</span>
+    </Badge>
+  )
+}
+const getStatusBadgeClass = (status) => {
+  switch(status) {
+    case "checked_in":
+      return "bg-green-100 text-green-600";
+    case "checked_out":
+      return "bg-gray-100 text-gray-600";
+    case "pre_approved":
+      return "bg-blue-100 text-blue-600";
+    case "approved":
+      return "bg-teal-100 text-teal-600";
+    case "pending":
+      return "bg-yellow-100 text-yellow-600"; 
+    case "cancelled":
+      return "bg-red-100 text-red-600";
+    default:
+      return "";
   }
+}
+
+  
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>

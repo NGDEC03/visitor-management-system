@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Html5Qrcode } from "html5-qrcode"
 import { Camera, CheckSquare, QrCode, UserCheck, UserMinus, CheckCircle, XCircle, Clock } from "lucide-react"
+import jsQR from "jsqr"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,8 +20,9 @@ export function CheckInOutScreen() {
   const [visitorEmail, setVisitorEmail] = useState("")
   const [scanActive, setScanActive] = useState(false)
   const [visitorData, setVisitorData] = useState<any>(null)
-  const qrRef = useRef<HTMLDivElement>(null)
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const fetchVisitorData = async (email: string) => {
     try {
@@ -29,7 +30,7 @@ export function CheckInOutScreen() {
       setVisitorData(res)
       toast({ title: "Visitor found", description: "Visitor info retrieved successfully" })
     } catch (err: any) {
-      toast({ title: "Error", description: err.message })
+      toast({ title: "Visitor Not Found", description: err.message })
     }
   }
 
@@ -45,28 +46,33 @@ export function CheckInOutScreen() {
   }
 
   const startQrScanner = async () => {
-    if (scanActive || !qrRef.current) return
-
-    const qrRegionId = qrRef.current.id
-    setScanActive(true)
-
-    const qrCodeScanner = new Html5Qrcode(qrRegionId)
-    html5QrCodeRef.current = qrCodeScanner
+    if (scanActive || !videoRef.current || !canvasRef.current) return
 
     try {
-      await qrCodeScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText) => {
-          console.log(decodedText);
-          
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      streamRef.current = stream
+      videoRef.current.srcObject = stream
+      setScanActive(true)
+
+      const canvas = canvasRef.current
+      const context = canvas.getContext("2d")
+      if (!context) return
+
+      const scanFrame = () => {
+        if (!videoRef.current || !canvasRef.current || !context || !scanActive) return
+
+        canvas.width = videoRef.current.videoWidth
+        canvas.height = videoRef.current.videoHeight
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
+
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+        const code = jsQR(imageData.data, imageData.width, imageData.height)
+
+        if (code) {
           try {
-            const parsed = JSON.parse(decodedText)
-    
+            const parsed = JSON.parse(code.data)
             if (parsed?.id) {
-              await qrCodeScanner.stop()
-              qrCodeScanner.clear()
-              setScanActive(false)
+              stopQrScanner()
               fetchVisitorData(parsed.id)
             } else {
               throw new Error("Invalid QR payload: missing ID")
@@ -77,26 +83,30 @@ export function CheckInOutScreen() {
               title: "Invalid QR Code",
               description: "Please scan a valid visitor QR with proper ID.",
             })
-            setScanActive(false)
           }
-        },
-        (errorMessage:string) => {
-          console.log("Scan error:", errorMessage)
         }
-      )
+
+        if (scanActive) {
+          requestAnimationFrame(scanFrame)
+        }
+      }
+
+      scanFrame()
     } catch (err: any) {
-      toast({ title: "Error", description: "QR scanning failed" })
+      toast({ title: "Error", description: "Failed to access camera" })
       setScanActive(false)
     }
-    
   }
 
-  const stopQrScanner = async () => {
-    if (html5QrCodeRef.current) {
-      await html5QrCodeRef.current.stop()
-      await html5QrCodeRef.current.clear()
-      setScanActive(false)
+  const stopQrScanner = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    setScanActive(false)
   }
 
   const handleCheckIn = async () => {
@@ -134,11 +144,10 @@ export function CheckInOutScreen() {
 
   useEffect(() => {
     return () => {
-      if (html5QrCodeRef.current?.isScanning) {
-        html5QrCodeRef.current.stop().then(() => html5QrCodeRef.current?.clear())
-      }
+      stopQrScanner()
     }
   }, [])
+console.log(visitorData);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -157,7 +166,13 @@ export function CheckInOutScreen() {
             <TabsContent value="scan" className="space-y-4">
               <div className="flex flex-col items-center justify-center gap-4">
                 <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                  <div id="qr-reader" ref={qrRef} className="w-full h-full" />
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
                 </div>
                 <Button onClick={startQrScanner} disabled={scanActive} className="w-full">
                   {scanActive ? "Scanning..." : "Start Scanning"}
@@ -306,7 +321,7 @@ export function CheckInOutScreen() {
                     </Button>
                   )}
 
-                  {visitorData.status === "checked-in" && (
+                  {visitorData.status === "checked_in" && (
                     <Button onClick={handleCheckOut} className="w-full">
                       <UserMinus className="mr-2 h-4 w-4" />
                       Check Out
