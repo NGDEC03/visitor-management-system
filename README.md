@@ -113,7 +113,7 @@ visitor/
 - Real-time status updates
 
 ### Dashboard
-- Real-time analytics
+-  Analytics
 - Department-wise distribution
 - Visitor flow tracking
 - Recent visitor history
@@ -135,16 +135,7 @@ The application can be deployed on Vercel:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-For support, email [your-email@example.com] or open an issue in the repository.
-
-## Acknowledgments
-
-- Next.js team for the amazing framework
-- Prisma team for the excellent ORM
-- All contributors who have helped improve this project
+For support, email [ngdec03@gmail.com] or open an issue in the repository.
