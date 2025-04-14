@@ -27,7 +27,7 @@ export default function LandingPage() {
         transition={{ duration: 0.6 }}
       >
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 mb-4">
-          Welcome to SecurePass – Smart Visitor Management System
+          Welcome to Smart Visitor Management System
         </h1>
         <p className="text-gray-600 text-lg mb-6">
           Streamline workplace security with real-time approvals, pre-scheduled visits, and photo verification. Manage all visitor touchpoints from one powerful platform.
